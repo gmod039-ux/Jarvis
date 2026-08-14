@@ -1,0 +1,6 @@
+{
+  "name": "JARVIS AI macOS Agent",
+  "description": "Intelligent autonomous AI Desktop Agent and Command Center for macOS with voice control, AppleScript & terminal automation, workflow chaining, and local daemon builder.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
