@@ -1,3 +1,5 @@
+export type OSMode = "windows" | "macos";
+
 export interface ChatMessage {
   id: string;
   role: "user" | "model" | "system";
@@ -12,13 +14,14 @@ export interface ExecutedAction {
   toolName: string;
   args: Record<string, any>;
   commandString: string;
-  type: "terminal" | "applescript" | "shortcut" | "file_op" | "telemetry";
+  type: "powershell" | "terminal" | "applescript" | "shortcut" | "file_op" | "telemetry" | "batch";
   simulatedOutput: string;
   status: "pending" | "running" | "completed" | "failed";
   timestamp: string;
 }
 
 export interface SystemTelemetry {
+  osMode?: OSMode;
   cpu: {
     chip: string;
     load: number;
@@ -61,6 +64,14 @@ export interface SystemTelemetry {
     uptime: string;
     sipStatus: string;
   };
+  windows?: {
+    edition: string;
+    build: string;
+    hostname: string;
+    powershellVersion: string;
+    defenderStatus: string;
+    uptime: string;
+  };
   processes: {
     pid: number;
     name: string;
@@ -76,21 +87,23 @@ export interface WorkflowRoutine {
   description: string;
   icon: string;
   category: "productivity" | "system" | "media" | "developer";
+  osTarget?: "all" | "windows" | "macos";
   steps: {
     stepNumber: number;
     title: string;
-    type: "applescript" | "terminal" | "shortcut" | "notification";
+    type: "powershell" | "applescript" | "terminal" | "shortcut" | "notification" | "batch";
     command: string;
     expectedOutput: string;
   }[];
 }
 
 export interface NativeAgentConfig {
+  osTarget: OSMode;
   agentName: string;
   wakeWord: string;
   hotkey: string;
-  preferredMusicApp: "Music" | "Spotify";
-  preferredBrowser: "Safari" | "Google Chrome" | "Arc";
+  preferredMusicApp: "Spotify" | "Music" | "Windows Media Player";
+  preferredBrowser: "Google Chrome" | "Microsoft Edge" | "Safari" | "Arc" | "Firefox";
   voiceSpeed: number;
   voiceGender:
     | "Daniel (British)"
@@ -98,9 +111,13 @@ export interface NativeAgentConfig {
     | "Karen (AU)"
     | "Alex (Classic)"
     | "Kyoko (Japanese Anime)"
-    | "Victoria (High Pitch Kawaii)";
+    | "Victoria (High Pitch Kawaii)"
+    | "Microsoft Irina (Russian Win11)"
+    | "Microsoft David (English US Win11)"
+    | "Microsoft Zira (English US Win11)";
   autoStartOnBoot: boolean;
   enableShortcutsBridge: boolean;
+  packageAsExe: boolean;
 }
 
 export type ActiveTab = "console" | "builder" | "telemetry" | "workflows" | "library";

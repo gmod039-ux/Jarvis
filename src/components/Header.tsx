@@ -11,8 +11,9 @@ import {
   Activity,
   ShieldCheck,
   Sparkles,
+  Layers,
 } from "lucide-react";
-import { ActiveTab, SystemTelemetry } from "../types";
+import { ActiveTab, OSMode, SystemTelemetry } from "../types";
 
 interface HeaderProps {
   activeTab: ActiveTab;
@@ -24,6 +25,8 @@ interface HeaderProps {
   telemetry: SystemTelemetry | null;
   persona: string;
   onOpenVoiceSettings: () => void;
+  osMode: OSMode;
+  setOsMode: (os: OSMode) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -36,6 +39,8 @@ export const Header: React.FC<HeaderProps> = ({
   telemetry,
   persona,
   onOpenVoiceSettings,
+  osMode,
+  setOsMode,
 }) => {
   const [timeStr, setTimeStr] = useState("");
 
@@ -47,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
-        }) + " PST"
+        })
       );
     };
     updateTime();
@@ -55,12 +60,23 @@ export const Header: React.FC<HeaderProps> = ({
     return () => clearInterval(interval);
   }, []);
 
+  const isWindows = osMode === "windows";
+
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: string }[] = [
     { id: "console", label: "AI Command Console", icon: <Terminal className="w-4 h-4" /> },
-    { id: "builder", label: "macOS Native Builder", icon: <Download className="w-4 h-4" />, badge: "Python/Setup" },
+    {
+      id: "builder",
+      label: isWindows ? "Windows EXE / Agent Builder" : "macOS Native Builder",
+      icon: <Download className="w-4 h-4" />,
+      badge: isWindows ? ".EXE / PowerShell" : "Python / Daemon",
+    },
     { id: "workflows", label: "Workflow Studio", icon: <Workflow className="w-4 h-4" /> },
     { id: "telemetry", label: "System Telemetry", icon: <Cpu className="w-4 h-4" /> },
-    { id: "library", label: "AppleScript Vault", icon: <BookOpen className="w-4 h-4" /> },
+    {
+      id: "library",
+      label: isWindows ? "PowerShell & Script Vault" : "AppleScript Vault",
+      icon: <BookOpen className="w-4 h-4" />,
+    },
   ];
 
   return (
@@ -70,33 +86,43 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-4 overflow-x-auto no-scrollbar text-white/50">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-[#34C759] shadow-[0_0_8px_#34C759]" />
-            <span className="text-[#34C759] font-semibold tracking-wider text-[11px]">SYSTEM NOMINAL</span>
+            <span className="text-[#34C759] font-semibold tracking-wider text-[11px]">
+              {isWindows ? "WIN11 READY" : "MACOS NOMINAL"}
+            </span>
           </div>
 
           <span className="text-white/20">|</span>
 
           <div className="flex items-center space-x-1.5 text-[#E0E0E0]">
             <ShieldCheck className="w-3.5 h-3.5 text-[#00D1FF]" />
-            <span className="text-[11px] text-white/70">SIP Protected</span>
+            <span className="text-[11px] text-white/70">
+              {isWindows ? "Defender Realtime Protection" : "SIP Protected"}
+            </span>
           </div>
 
           <span className="text-white/20">|</span>
 
           <div className="flex items-center space-x-1.5 text-[#E0E0E0]">
             <Activity className="w-3.5 h-3.5 text-[#00D1FF]" />
-            <span className="text-[11px] text-white/70">CPU: <span className="text-[#00D1FF]">{telemetry ? `${telemetry.cpu.load}%` : "12%"}</span></span>
+            <span className="text-[11px] text-white/70">
+              CPU: <span className="text-[#00D1FF]">{telemetry ? `${telemetry.cpu.load}%` : "14%"}</span>
+            </span>
           </div>
 
           <span className="text-white/20">|</span>
 
           <div className="flex items-center space-x-1.5 text-white/70 text-[11px]">
-            <span>MEM: <span className="text-[#00D1FF]">{telemetry ? `${telemetry.memory.percentage}%` : "36%"}</span></span>
+            <span>
+              RAM: <span className="text-[#00D1FF]">{telemetry ? `${telemetry.memory.percentage}%` : "38%"}</span>
+            </span>
           </div>
 
           <span className="text-white/20">|</span>
 
           <div className="flex items-center space-x-1.5 text-white/70 text-[11px]">
-            <span>BATT: <span className="text-[#34C759]">{telemetry ? `${telemetry.battery.level}% ⚡` : "89% ⚡"}</span></span>
+            <span>
+              PWR: <span className="text-[#34C759]">{telemetry ? `${telemetry.battery.level}% ⚡` : "92% ⚡"}</span>
+            </span>
           </div>
         </div>
 
@@ -120,9 +146,9 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Main Nav Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Brand - Bento Style */}
+          {/* Logo & Brand */}
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00D1FF] to-[#0047FF] flex items-center justify-center shadow-[0_0_15px_rgba(0,209,255,0.4)]">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#00D1FF] via-[#0047FF] to-pink-500 flex items-center justify-center shadow-[0_0_15px_rgba(0,209,255,0.4)]">
               <div className="w-4 h-4 bg-[#050505] rounded-full border border-white/20 shadow-[0_0_10px_rgba(0,209,255,0.8)] flex items-center justify-center">
                 <div className="w-1.5 h-1.5 bg-[#00D1FF] rounded-full animate-ping" />
               </div>
@@ -130,12 +156,15 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <h1 className="text-base font-medium tracking-tight text-[#E0E0E0] flex items-center gap-2">
                 <span className="font-bold tracking-wider">JARVIS</span>
-                <span className="text-white/40 text-xs font-mono">// macOS Core v4.2</span>
+                <span className="text-pink-400 text-xs font-mono">&amp; Aoi-chan</span>
+                <span className="text-white/40 text-[11px] font-mono hidden sm:inline">
+                  //{isWindows ? "Windows 11 / PowerShell" : "macOS Sequoia"}
+                </span>
               </h1>
             </div>
           </div>
 
-          {/* Navigation Tabs - Bento Pill Strip */}
+          {/* Navigation Tabs */}
           <nav className="hidden md:flex items-center space-x-1 bg-[#121212] p-1.5 rounded-2xl border border-white/10">
             {navItems.map((item) => {
               const active = activeTab === item.id;
@@ -165,8 +194,36 @@ export const Header: React.FC<HeaderProps> = ({
             })}
           </nav>
 
-          {/* Right Action Controls */}
-          <div className="flex items-center space-x-2.5">
+          {/* Right Action Controls: OS Mode Switcher + Voice + Persona */}
+          <div className="flex items-center space-x-2">
+            {/* OS Mode Toggle (Windows / macOS) */}
+            <div className="flex items-center bg-[#121212] p-1 rounded-xl border border-white/10 text-xs font-mono">
+              <button
+                onClick={() => setOsMode("windows")}
+                title="Switch Target Environment to Windows 11 / 10"
+                className={`px-2.5 py-1 rounded-lg transition-all flex items-center space-x-1.5 ${
+                  isWindows
+                    ? "bg-[#00D1FF]/20 text-[#00D1FF] border border-[#00D1FF]/40 font-semibold"
+                    : "text-white/40 hover:text-white"
+                }`}
+              >
+                <span>🪟</span>
+                <span className="hidden sm:inline">Win 11</span>
+              </button>
+              <button
+                onClick={() => setOsMode("macos")}
+                title="Switch Target Environment to Apple macOS"
+                className={`px-2.5 py-1 rounded-lg transition-all flex items-center space-x-1.5 ${
+                  !isWindows
+                    ? "bg-[#00D1FF]/20 text-[#00D1FF] border border-[#00D1FF]/40 font-semibold"
+                    : "text-white/40 hover:text-white"
+                }`}
+              >
+                <span>🍎</span>
+                <span className="hidden sm:inline">macOS</span>
+              </button>
+            </div>
+
             {/* Voice & Persona Customizer Button */}
             <button
               onClick={onOpenVoiceSettings}
@@ -182,11 +239,11 @@ export const Header: React.FC<HeaderProps> = ({
                 {persona === "anime"
                   ? "🌸 Aoi-chan"
                   : persona === "tsundere"
-                  ? "💢 Asuka-AI"
+                  ? "💢 Asuka"
                   : persona === "friday"
                   ? "🛡️ FRIDAY"
                   : persona === "cyberpunk"
-                  ? "⚡ NEURAL-01"
+                  ? "⚡ NEURAL"
                   : persona === "glados"
                   ? "🤖 GLaDOS"
                   : "🤵 JARVIS"}
@@ -233,4 +290,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-

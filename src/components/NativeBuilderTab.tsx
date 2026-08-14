@@ -5,56 +5,89 @@ import {
   Check,
   Terminal,
   Settings,
-  Code2,
   Cpu,
-  ShieldAlert,
-  Play,
-  CheckCircle2,
+  ShieldCheck,
   FileText,
-  KeyRound,
-  Apple,
-  ExternalLink,
+  Play,
+  Layers,
+  Sparkles,
+  Zap,
+  Package,
 } from "lucide-react";
-import { NativeAgentConfig } from "../types";
+import { NativeAgentConfig, OSMode } from "../types";
 
-export const NativeBuilderTab: React.FC = () => {
+interface NativeBuilderTabProps {
+  osMode?: OSMode;
+  setOsMode?: (os: OSMode) => void;
+}
+
+export const NativeBuilderTab: React.FC<NativeBuilderTabProps> = ({
+  osMode = "windows",
+  setOsMode,
+}) => {
+  const [currentOs, setCurrentOs] = useState<OSMode>(osMode);
+
+  useEffect(() => {
+    setCurrentOs(osMode);
+  }, [osMode]);
+
+  const handleSelectOs = (os: OSMode) => {
+    setCurrentOs(os);
+    if (setOsMode) setOsMode(os);
+  };
+
+  const isWindows = currentOs === "windows";
+
   const [config, setConfig] = useState<NativeAgentConfig>({
+    osTarget: currentOs,
     agentName: "JARVIS",
     wakeWord: "hey jarvis",
-    hotkey: "Option+Space",
+    hotkey: isWindows ? "Ctrl+Shift+J" : "Option+Space",
     preferredMusicApp: "Spotify",
-    preferredBrowser: "Safari",
-    voiceSpeed: 175,
-    voiceGender: "Daniel (British)",
+    preferredBrowser: isWindows ? "Microsoft Edge" : "Safari",
+    voiceSpeed: 180,
+    voiceGender: isWindows ? "Microsoft Irina (Russian Win11)" : "Daniel (British)",
     autoStartOnBoot: true,
     enableShortcutsBridge: true,
+    packageAsExe: true,
   });
 
   const [generatedData, setGeneratedData] = useState<{
     pythonScript: string;
-    installSh: string;
-    launchAgentPlist: string;
+    startBat?: string;
+    installPs1?: string;
+    installSh?: string;
+    launchAgentPlist?: string;
+    exeBuildCommands?: string;
   } | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [activeCodeTab, setActiveCodeTab] = useState<"python" | "install" | "plist">("python");
+  const [activeCodeTab, setActiveCodeTab] = useState<string>(isWindows ? "bat" : "python");
 
   const generateLocalAgentFiles = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/jarvis/generate-local-agent", {
+      const endpoint = isWindows
+        ? "/api/jarvis/generate-windows-agent"
+        : "/api/jarvis/generate-local-agent";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentName: config.agentName,
           wakeWord: config.wakeWord,
           hotkey: config.hotkey,
-          features: ["voice_control", "applescript", "hotkeys", "menu_bar", "shortcuts"],
+          osTarget: currentOs,
+          persona: "anime",
         }),
       });
       const data = await res.json();
       setGeneratedData(data);
+      if (isWindows && activeCodeTab === "plist") {
+        setActiveCodeTab("bat");
+      }
     } catch (err) {
       console.error("Failed to generate local agent:", err);
     } finally {
@@ -64,7 +97,7 @@ export const NativeBuilderTab: React.FC = () => {
 
   useEffect(() => {
     generateLocalAgentFiles();
-  }, [config.agentName, config.wakeWord, config.hotkey]);
+  }, [config.agentName, config.wakeWord, config.hotkey, currentOs]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -90,43 +123,73 @@ export const NativeBuilderTab: React.FC = () => {
       <div className="bg-[#121212] rounded-3xl border border-white/10 p-6 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bento-dot-grid opacity-5 pointer-events-none" />
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 z-10 relative">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <Apple className="w-5 h-5 text-white" />
+          <div className="space-y-1.5">
+            <div className="flex items-center space-x-2.5">
+              <span className="text-xl">{isWindows ? "🪟" : "🍎"}</span>
               <h1 className="text-lg font-bold text-[#E0E0E0] font-mono tracking-wide">
-                macOS NATIVE JARVIS DAEMON BUILDER
+                {isWindows
+                  ? "WINDOWS 11 / 10 NATIVE AI AGENT & .EXE BUILDER"
+                  : "macOS NATIVE JARVIS DAEMON BUILDER"}
               </h1>
             </div>
-            <p className="text-xs text-white/50 max-w-2xl leading-relaxed">
-              Export and run a real background AI daemon on your Mac. Controls Spotify, Apple Music, Reminders, Finder, and Terminal with voice triggers and global hotkeys powered by Gemini 3.7.
+            <p className="text-xs text-white/60 max-w-3xl leading-relaxed">
+              {isWindows
+                ? "Упакуйте проект в полноценный нативный Windows EXE файл, настройте голосовой запуск через PowerShell/Batch или запустите фоновую службу Windows с интеграцией Gemini 3.7."
+                : "Экспортируйте и запустите реальный фоновый демон на Mac. Управляйте Spotify, Apple Music, Reminders, Finder и терминалом с голосовым триггером и горячими клавишами."}
             </p>
           </div>
 
           <div className="flex items-center space-x-3 shrink-0">
+            {/* OS Picker in Builder */}
+            <div className="flex bg-[#181818] p-1 rounded-2xl border border-white/15">
+              <button
+                onClick={() => handleSelectOs("windows")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center space-x-1.5 ${
+                  isWindows
+                    ? "bg-[#00D1FF] text-[#050505] font-bold shadow-[0_0_12px_rgba(0,209,255,0.4)]"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
+                <span>🪟 Windows (.EXE)</span>
+              </button>
+              <button
+                onClick={() => handleSelectOs("macos")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all flex items-center space-x-1.5 ${
+                  !isWindows
+                    ? "bg-[#00D1FF] text-[#050505] font-bold shadow-[0_0_12px_rgba(0,209,255,0.4)]"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
+                <span>🍎 macOS (Daemon)</span>
+              </button>
+            </div>
+
             <button
               onClick={() => generateLocalAgentFiles()}
               disabled={loading}
-              className="bg-[#00D1FF] hover:bg-[#00D1FF]/80 text-[#050505] text-xs font-mono font-bold px-4 py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(0,209,255,0.3)] flex items-center space-x-2 active:scale-95 disabled:opacity-50"
+              className="bg-[#00D1FF]/20 hover:bg-[#00D1FF]/30 text-[#00D1FF] border border-[#00D1FF]/40 text-xs font-mono font-semibold px-4 py-2 rounded-xl transition-all flex items-center space-x-2 active:scale-95 disabled:opacity-50"
             >
-              <Cpu className="w-4 h-4" />
-              <span>{loading ? "Compiling..." : "Recompile Daemon"}</span>
+              <Cpu className="w-3.5 h-3.5" />
+              <span>{loading ? "Генерация..." : "Обновить скрипты"}</span>
             </button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Configuration Settings Bento Tile */}
+        {/* Left Column: Configuration Settings */}
         <div className="lg:col-span-1 bg-[#121212] rounded-3xl border border-white/10 p-5 space-y-5 shadow-2xl relative overflow-hidden">
           <div className="flex items-center space-x-2 pb-3 border-b border-white/10">
             <Settings className="w-4 h-4 text-[#00D1FF]" />
-            <h2 className="text-xs font-semibold text-[#E0E0E0] font-mono uppercase tracking-wider">DAEMON CONFIGURATION</h2>
+            <h2 className="text-xs font-semibold text-[#E0E0E0] font-mono uppercase tracking-wider">
+              {isWindows ? "ПАРАМЕТРЫ WINDOWS СБОРКИ" : "ПАРАМЕТРЫ macOS СБОРКИ"}
+            </h2>
           </div>
 
           <div className="space-y-4 text-xs font-mono">
             {/* Agent Name */}
             <div>
-              <label className="text-white/40 block mb-1 text-[11px]">Agent Identity Name</label>
+              <label className="text-white/40 block mb-1 text-[11px]">Имя ассистента</label>
               <input
                 type="text"
                 value={config.agentName}
@@ -137,276 +200,251 @@ export const NativeBuilderTab: React.FC = () => {
 
             {/* Wake Word */}
             <div>
-              <label className="text-white/40 block mb-1 text-[11px]">Microphone Wake Word</label>
+              <label className="text-white/40 block mb-1 text-[11px]">Голосовая фраза активации (Wake Word)</label>
               <input
                 type="text"
                 value={config.wakeWord}
                 onChange={(e) => setConfig({ ...config, wakeWord: e.target.value })}
-                placeholder="e.g. hey jarvis"
+                placeholder={isWindows ? "аой тян / hey jarvis" : "hey jarvis"}
                 className="w-full bg-[#1A1A1A] border border-white/10 focus:border-[#00D1FF]/50 rounded-xl px-3 py-2 text-white/90 outline-none"
               />
             </div>
 
             {/* Global Hotkey */}
             <div>
-              <label className="text-white/40 block mb-1 text-[11px]">Global macOS Hotkey Trigger</label>
-              <select
-                aria-label="Global macOS Hotkey Trigger"
+              <label className="text-white/40 block mb-1 text-[11px]">Горячая клавиша вызова</label>
+              <input
+                type="text"
                 value={config.hotkey}
                 onChange={(e) => setConfig({ ...config, hotkey: e.target.value })}
                 className="w-full bg-[#1A1A1A] border border-white/10 focus:border-[#00D1FF]/50 rounded-xl px-3 py-2 text-white/90 outline-none"
-              >
-                <option value="Option+Space">⌥ Option + Space</option>
-                <option value="Command+Shift+J">⌘ Command + Shift + J</option>
-                <option value="Control+Space">⌃ Control + Space</option>
-                <option value="F13">Custom Function Key (F13)</option>
-              </select>
+              />
             </div>
 
             {/* Voice Engine */}
             <div>
-              <label className="text-white/40 block mb-1 text-[11px]">macOS Voice Output Engine</label>
+              <label className="text-white/40 block mb-1 text-[11px]">Движок речи (Speech Engine)</label>
               <select
-                aria-label="macOS Voice Output Engine"
                 value={config.voiceGender}
                 onChange={(e: any) => setConfig({ ...config, voiceGender: e.target.value })}
                 className="w-full bg-[#1A1A1A] border border-white/10 focus:border-[#00D1FF]/50 rounded-xl px-3 py-2 text-white/90 outline-none"
               >
-                <option value="Kyoko (Japanese Anime)">🌸 Kyoko / Aoi (Japanese Anime Tyan Voice)</option>
-                <option value="Victoria (High Pitch Kawaii)">✨ Victoria (High-Pitch Cute English)</option>
-                <option value="Daniel (British)">Daniel (British English - Tony Stark Authentic)</option>
-                <option value="Samantha (US)">Samantha (macOS American Voice)</option>
-                <option value="Karen (AU)">Karen (Australian English)</option>
-                <option value="Alex (Classic)">Alex (Classic Natural Pitch)</option>
+                {isWindows ? (
+                  <>
+                    <option value="Microsoft Irina (Russian Win11)">Microsoft Irina (Русский Win 11)</option>
+                    <option value="Microsoft David (English US Win11)">Microsoft David (English US)</option>
+                    <option value="Microsoft Zira (English US Win11)">Microsoft Zira (English US)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="Daniel (British)">Daniel (Британский JARVIS)</option>
+                    <option value="Samantha (US)">Samantha (macOS Standard)</option>
+                    <option value="Kyoko (Japanese Anime)">Kyoko (Аниме голос)</option>
+                  </>
+                )}
               </select>
             </div>
 
-            {/* Preferred Media Player */}
-            <div>
-              <label className="text-white/40 block mb-1 text-[11px]">Preferred Media Player Target</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setConfig({ ...config, preferredMusicApp: "Spotify" })}
-                  className={`p-2.5 rounded-xl border text-center transition-all ${
-                    config.preferredMusicApp === "Spotify"
-                      ? "bg-[#34C759]/10 border-[#34C759]/40 text-[#34C759] font-bold"
-                      : "bg-[#1A1A1A] border-white/10 text-white/50"
-                  }`}
-                >
-                  Spotify
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfig({ ...config, preferredMusicApp: "Music" })}
-                  className={`p-2.5 rounded-xl border text-center transition-all ${
-                    config.preferredMusicApp === "Music"
-                      ? "bg-pink-500/10 border-pink-500/40 text-pink-300 font-bold"
-                      : "bg-[#1A1A1A] border-white/10 text-white/50"
-                  }`}
-                >
-                  Apple Music
-                </button>
+            {/* Windows 1-Click Quick Build Steps */}
+            {isWindows ? (
+              <div className="bg-[#181818] rounded-2xl p-3.5 border border-[#00D1FF]/20 space-y-2">
+                <div className="flex items-center space-x-2 text-[#00D1FF] font-semibold text-[11px]">
+                  <Package className="w-3.5 h-3.5" />
+                  <span>КАК СОБРАТЬ .EXE В РЕПОЗИТОРИИ:</span>
+                </div>
+                <div className="text-[11px] text-white/70 space-y-1.5">
+                  <p className="font-sans text-white/60">
+                    В репозитории уже настроен <strong>Electron</strong> и <strong>GitHub Actions</strong>.
+                  </p>
+                  <code className="block bg-[#0A0A0A] p-2 rounded-lg text-[#00D1FF] select-all">
+                    npm run electron:build
+                  </code>
+                  <p className="text-[10px] text-white/40">
+                    Готовый установщик появится в папке <span className="text-white/70 font-mono">dist/</span> или <span className="text-white/70 font-mono">release/</span>!
+                  </p>
+                </div>
               </div>
-            </div>
-
-            {/* Toggles */}
-            <div className="space-y-2 pt-2 border-t border-white/10">
-              <label className="flex items-center space-x-2 cursor-pointer text-white/70">
-                <input
-                  type="checkbox"
-                  checked={config.autoStartOnBoot}
-                  onChange={(e) => setConfig({ ...config, autoStartOnBoot: e.target.checked })}
-                  className="rounded border-white/20 text-[#00D1FF] focus:ring-[#00D1FF] bg-[#1A1A1A]"
-                />
-                <span>Auto-launch on Mac Boot (LaunchAgent)</span>
-              </label>
-
-              <label className="flex items-center space-x-2 cursor-pointer text-white/70">
-                <input
-                  type="checkbox"
-                  checked={config.enableShortcutsBridge}
-                  onChange={(e) => setConfig({ ...config, enableShortcutsBridge: e.target.checked })}
-                  className="rounded border-white/20 text-[#00D1FF] focus:ring-[#00D1FF] bg-[#1A1A1A]"
-                />
-                <span>Enable Apple Shortcuts CLI Bridge</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Permissions Warning Checklist */}
-          <div className="bg-[#050505] rounded-2xl p-3.5 border border-amber-500/20 text-amber-300 space-y-2">
-            <div className="flex items-center space-x-1.5 text-xs font-semibold">
-              <ShieldAlert className="w-4 h-4 text-amber-400" />
-              <span>macOS Permissions Needed:</span>
-            </div>
-            <ul className="text-[11px] space-y-1 text-white/40 list-disc list-inside">
-              <li>Accessibility (for hotkeys & window automation)</li>
-              <li>Microphone (for voice speech input)</li>
-              <li>Automation (System Events, Spotify, Reminders)</li>
-            </ul>
+            ) : (
+              <div className="bg-[#181818] rounded-2xl p-3.5 border border-white/10 space-y-2">
+                <div className="flex items-center space-x-2 text-white/80 font-semibold text-[11px]">
+                  <Zap className="w-3.5 h-3.5 text-[#00D1FF]" />
+                  <span>БЫСТРЫЙ СТАРТ НА MAC:</span>
+                </div>
+                <code className="block bg-[#0A0A0A] p-2 rounded-lg text-[#00D1FF] text-[11px] select-all">
+                  bash ~/.jarvis_macos/run_jarvis.sh
+                </code>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right Column: Code Viewer & Setup Walkthrough Bento Tile */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Generated Code Viewer */}
-          <div className="bg-[#121212] rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
-            {/* Tabs */}
-            <div className="bg-[#1A1A1A] px-4 py-2.5 border-b border-white/10 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center space-x-1 font-mono text-xs">
-                <button
-                  onClick={() => setActiveCodeTab("python")}
-                  className={`px-3 py-1.5 rounded-xl transition-all ${
-                    activeCodeTab === "python"
-                      ? "bg-white/15 text-white border border-white/20 font-semibold"
-                      : "text-white/40 hover:text-white"
-                  }`}
-                >
-                  jarvis.py (Main Daemon)
-                </button>
-                <button
-                  onClick={() => setActiveCodeTab("install")}
-                  className={`px-3 py-1.5 rounded-xl transition-all ${
-                    activeCodeTab === "install"
-                      ? "bg-white/15 text-white border border-white/20 font-semibold"
-                      : "text-white/40 hover:text-white"
-                  }`}
-                >
-                  install.sh (Auto Setup)
-                </button>
-                <button
-                  onClick={() => setActiveCodeTab("plist")}
-                  className={`px-3 py-1.5 rounded-xl transition-all ${
-                    activeCodeTab === "plist"
-                      ? "bg-white/15 text-white border border-white/20 font-semibold"
-                      : "text-white/40 hover:text-white"
-                  }`}
-                >
-                  LaunchAgent (.plist)
-                </button>
+        {/* Right Column: Code & Script Exporter Bento Tile */}
+        <div className="lg:col-span-2 bg-[#121212] rounded-3xl border border-white/10 p-5 space-y-4 shadow-2xl relative overflow-hidden flex flex-col justify-between">
+          <div className="space-y-3">
+            {/* Tab Header & Action Buttons */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+              <div className="flex items-center space-x-1.5 bg-[#181818] p-1 rounded-2xl border border-white/10">
+                {isWindows ? (
+                  <>
+                    <button
+                      onClick={() => setActiveCodeTab("bat")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                        activeCodeTab === "bat"
+                          ? "bg-white/15 text-white font-semibold shadow-inner"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      start_jarvis.bat
+                    </button>
+                    <button
+                      onClick={() => setActiveCodeTab("python")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                        activeCodeTab === "python"
+                          ? "bg-white/15 text-white font-semibold shadow-inner"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      jarvis_windows.py
+                    </button>
+                    <button
+                      onClick={() => setActiveCodeTab("ps1")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                        activeCodeTab === "ps1"
+                          ? "bg-white/15 text-white font-semibold shadow-inner"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      install_jarvis.ps1
+                    </button>
+                    <button
+                      onClick={() => setActiveCodeTab("exe_guide")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                        activeCodeTab === "exe_guide"
+                          ? "bg-white/15 text-[#00D1FF] font-semibold shadow-inner"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      📦 Electron .EXE
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setActiveCodeTab("python")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                        activeCodeTab === "python"
+                          ? "bg-white/15 text-white font-semibold shadow-inner"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      jarvis.py
+                    </button>
+                    <button
+                      onClick={() => setActiveCodeTab("install")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                        activeCodeTab === "install"
+                          ? "bg-white/15 text-white font-semibold shadow-inner"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      install.sh
+                    </button>
+                    <button
+                      onClick={() => setActiveCodeTab("plist")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono transition-all ${
+                        activeCodeTab === "plist"
+                          ? "bg-white/15 text-white font-semibold shadow-inner"
+                          : "text-white/40 hover:text-white"
+                      }`}
+                    >
+                      LaunchAgent.plist
+                    </button>
+                  </>
+                )}
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center space-x-2 font-mono text-xs">
+              {/* Copy & Download Buttons */}
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={() => {
-                    const text =
-                      activeCodeTab === "python"
-                        ? generatedData?.pythonScript
-                        : activeCodeTab === "install"
-                        ? generatedData?.installSh
-                        : generatedData?.launchAgentPlist;
-                    if (text) handleCopy(text, activeCodeTab);
+                    let content = "";
+                    if (isWindows) {
+                      if (activeCodeTab === "bat") content = generatedData?.startBat || "";
+                      else if (activeCodeTab === "ps1") content = generatedData?.installPs1 || "";
+                      else if (activeCodeTab === "exe_guide") content = generatedData?.exeBuildCommands || "";
+                      else content = generatedData?.pythonScript || "";
+                    } else {
+                      if (activeCodeTab === "install") content = generatedData?.installSh || "";
+                      else if (activeCodeTab === "plist") content = generatedData?.launchAgentPlist || "";
+                      else content = generatedData?.pythonScript || "";
+                    }
+                    handleCopy(content, activeCodeTab);
                   }}
-                  className="flex items-center space-x-1 bg-white/5 hover:bg-white/10 text-white/80 px-3 py-1.5 rounded-xl border border-white/10 transition-colors"
+                  className="px-3 py-1.5 bg-[#1E1E1E] hover:bg-[#252525] border border-white/10 rounded-xl text-xs font-mono text-white/80 flex items-center space-x-1.5 transition-all"
                 >
-                  {copiedKey === activeCodeTab ? <Check className="w-3.5 h-3.5 text-[#34C759]" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedKey === activeCodeTab ? "Copied!" : "Copy Code"}</span>
+                  {copiedKey === activeCodeTab ? (
+                    <Check className="w-3.5 h-3.5 text-[#34C759]" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-white/50" />
+                  )}
+                  <span>{copiedKey === activeCodeTab ? "Скопировано" : "Копировать"}</span>
                 </button>
 
                 <button
                   onClick={() => {
-                    if (activeCodeTab === "python" && generatedData?.pythonScript) {
-                      handleDownload("jarvis.py", generatedData.pythonScript);
-                    } else if (activeCodeTab === "install" && generatedData?.installSh) {
-                      handleDownload("install.sh", generatedData.installSh);
-                    } else if (activeCodeTab === "plist" && generatedData?.launchAgentPlist) {
-                      handleDownload("com.user.jarvisagent.plist", generatedData.launchAgentPlist);
+                    if (isWindows) {
+                      if (activeCodeTab === "bat") handleDownload("start_jarvis.bat", generatedData?.startBat || "");
+                      else if (activeCodeTab === "ps1") handleDownload("install_jarvis.ps1", generatedData?.installPs1 || "");
+                      else if (activeCodeTab === "exe_guide") handleDownload("build_exe.txt", generatedData?.exeBuildCommands || "");
+                      else handleDownload("jarvis_windows.py", generatedData?.pythonScript || "");
+                    } else {
+                      if (activeCodeTab === "install") handleDownload("install.sh", generatedData?.installSh || "");
+                      else if (activeCodeTab === "plist") handleDownload("com.user.jarvisagent.plist", generatedData?.launchAgentPlist || "");
+                      else handleDownload("jarvis.py", generatedData?.pythonScript || "");
                     }
                   }}
-                  className="flex items-center space-x-1 bg-[#00D1FF] hover:bg-[#00D1FF]/80 text-[#050505] font-bold px-3 py-1.5 rounded-xl transition-colors shadow-sm shadow-[#00D1FF]/30 active:scale-95"
+                  className="px-3 py-1.5 bg-[#00D1FF]/20 hover:bg-[#00D1FF]/30 border border-[#00D1FF]/40 rounded-xl text-xs font-mono text-[#00D1FF] flex items-center space-x-1.5 transition-all font-semibold"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Download</span>
+                  <span>Скачать</span>
                 </button>
               </div>
             </div>
 
-            {/* Code Content */}
-            <div className="p-4 bg-[#050505] max-h-[380px] overflow-y-auto font-mono text-xs text-[#00D1FF]/90">
-              <pre className="whitespace-pre-wrap leading-relaxed">
-                {activeCodeTab === "python" && (generatedData?.pythonScript || "Generating jarvis.py...")}
-                {activeCodeTab === "install" && (generatedData?.installSh || "Generating install.sh...")}
-                {activeCodeTab === "plist" && (generatedData?.launchAgentPlist || "Generating com.user.jarvisagent.plist...")}
+            {/* Code Display Window */}
+            <div className="relative rounded-2xl bg-[#080808] border border-white/10 p-4 font-mono text-xs overflow-x-auto max-h-[440px] text-white/80 leading-relaxed no-scrollbar">
+              <pre className="whitespace-pre">
+                {isWindows
+                  ? activeCodeTab === "bat"
+                    ? generatedData?.startBat || "Генерация start_jarvis.bat..."
+                    : activeCodeTab === "ps1"
+                    ? generatedData?.installPs1 || "Генерация install_jarvis.ps1..."
+                    : activeCodeTab === "exe_guide"
+                    ? generatedData?.exeBuildCommands || "Загрузка инструкций по сборке .EXE..."
+                    : generatedData?.pythonScript || "Генерация jarvis_windows.py..."
+                  : activeCodeTab === "install"
+                  ? generatedData?.installSh || "Генерация install.sh..."
+                  : activeCodeTab === "plist"
+                  ? generatedData?.launchAgentPlist || "Генерация plist..."
+                  : generatedData?.pythonScript || "Генерация jarvis.py..."}
               </pre>
             </div>
           </div>
 
-          {/* Step-by-Step 3-Minute macOS Installation Guide */}
-          <div className="bg-[#121212] rounded-3xl border border-white/10 p-6 space-y-4 shadow-2xl font-sans">
-            <h3 className="text-xs font-semibold text-[#E0E0E0] font-mono flex items-center space-x-2 uppercase tracking-wider">
-              <CheckCircle2 className="w-4 h-4 text-[#34C759]" />
-              <span>3-STEP TERMINAL INSTALLATION ON YOUR MAC</span>
-            </h3>
-
-            <div className="space-y-3 font-mono text-xs">
-              {/* Step 1 */}
-              <div className="bg-[#050505] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                <div className="flex items-center justify-between text-[#00D1FF] font-semibold">
-                  <span>Step 1: Set Gemini API Key in your Mac Terminal</span>
-                  <button
-                    onClick={() => handleCopy('export GEMINI_API_KEY="your-api-key-here"', "step1")}
-                    className="text-white/40 hover:text-white"
-                  >
-                    {copiedKey === "step1" ? <Check className="w-3 h-3 text-[#34C759]" /> : <Copy className="w-3 h-3" />}
-                  </button>
-                </div>
-                <div className="bg-[#121212] p-2.5 rounded-xl text-[#00D1FF] overflow-x-auto border border-white/5">
-                  <code>export GEMINI_API_KEY=&quot;your-api-key-here&quot;</code>
-                </div>
-                <p className="text-[11px] text-white/40 font-sans">
-                  Tip: Add this to your <code className="text-[#00D1FF]">~/.zshrc</code> file so it persists on reboot.
-                </p>
-              </div>
-
-              {/* Step 2 */}
-              <div className="bg-[#050505] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                <div className="flex items-center justify-between text-[#00D1FF] font-semibold">
-                  <span>Step 2: Run Auto-Installer Script</span>
-                  <button
-                    onClick={() =>
-                      handleCopy(
-                        `curl -fsSL https://raw.githubusercontent.com/user/jarvis/main/install.sh | bash`,
-                        "step2"
-                      )
-                    }
-                    className="text-white/40 hover:text-white"
-                  >
-                    {copiedKey === "step2" ? <Check className="w-3 h-3 text-[#34C759]" /> : <Copy className="w-3 h-3" />}
-                  </button>
-                </div>
-                <div className="bg-[#121212] p-2.5 rounded-xl text-[#00D1FF] overflow-x-auto border border-white/5">
-                  <code>bash install.sh</code>
-                </div>
-                <p className="text-[11px] text-white/40 font-sans">
-                  This installs Homebrew, Python, pyttsx3, SpeechRecognition, PyObjC, and creates a standalone virtualenv.
-                </p>
-              </div>
-
-              {/* Step 3 */}
-              <div className="bg-[#050505] p-3.5 rounded-2xl border border-white/5 space-y-2">
-                <div className="flex items-center justify-between text-[#00D1FF] font-semibold">
-                  <span>Step 3: Launch Jarvis in Background</span>
-                  <button
-                    onClick={() => handleCopy(`~/.jarvis_macos/run_jarvis.sh`, "step3")}
-                    className="text-white/40 hover:text-white"
-                  >
-                    {copiedKey === "step3" ? <Check className="w-3 h-3 text-[#34C759]" /> : <Copy className="w-3 h-3" />}
-                  </button>
-                </div>
-                <div className="bg-[#121212] p-2.5 rounded-xl text-[#00D1FF] overflow-x-auto border border-white/5">
-                  <code>~/.jarvis_macos/run_jarvis.sh</code>
-                </div>
-                <p className="text-[11px] text-white/40 font-sans">
-                  Jarvis will speak: &quot;JARVIS online and standing by, Sir.&quot; Say &quot;{config.wakeWord}&quot; anytime!
-                </p>
-              </div>
+          {/* Bottom Security / Tip Bar */}
+          <div className="pt-2 flex items-center justify-between text-[11px] font-mono text-white/40">
+            <div className="flex items-center space-x-1.5 text-white/60">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#34C759]" />
+              <span>
+                {isWindows
+                  ? "Совместимо с Windows 11 (23H2/24H2), Windows 10, PowerShell 7 и SAPI5."
+                  : "Совместимо с macOS Sequoia, Sonoma и Apple Silicon M-Series."}
+              </span>
             </div>
+            <span>v4.2 Cross-Platform</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
-

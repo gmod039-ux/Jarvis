@@ -207,9 +207,36 @@ export const CONSOLE_COMMANDS: ConsoleCommandDefinition[] = [
     aliases: ["/version", "sysinfo", "version", "neofetch"],
     category: "Diagnostics",
     usage: "/sysinfo",
-    description: "Display complete Apple Silicon architecture hardware identity, OS kernel, and memory stats.",
+    description: "Display complete workstation architecture hardware identity, OS kernel, and memory stats.",
     example: "/sysinfo",
     icon: "Info",
+  },
+  {
+    command: "/powershell",
+    aliases: ["/ps", "/ps1", "powershell", "ps"],
+    category: "System",
+    usage: "/powershell <command>",
+    description: "Execute native Windows PowerShell commands (Get-Process, Start-Process, Registry, etc.).",
+    example: "/powershell Get-Process | Select-Object -First 5",
+    icon: "Terminal",
+  },
+  {
+    command: "/winget",
+    aliases: ["winget", "/install"],
+    category: "Automation",
+    usage: "/winget <install|search|upgrade> <package>",
+    description: "Execute Windows Package Manager commands to install or update Windows software.",
+    example: "/winget install Spotify.Spotify",
+    icon: "Download",
+  },
+  {
+    command: "/os",
+    aliases: ["/platform", "os", "platform"],
+    category: "Utilities",
+    usage: "/os <windows|macos|toggle>",
+    description: "Switch active target operating system mode between Windows 11 and macOS.",
+    example: "/os windows",
+    icon: "Cpu",
   },
 ];
 
@@ -945,6 +972,75 @@ end tell`;
             commandString: `sudo killall ${proc}`,
             type: "terminal",
             simulatedOutput: `Signal SIGTERM sent to '${proc}'. macOS launchd will restart the daemon automatically.`,
+            status: "completed",
+            timestamp,
+          },
+        ],
+        shouldSpeak: true,
+      };
+    }
+
+    case "/powershell":
+    case "/ps":
+    case "/ps1":
+    case "powershell":
+    case "ps": {
+      const psCmd = args || "Get-Process | Select-Object -First 5";
+      return {
+        replyText: `Executed Windows PowerShell directive: "${psCmd}", Sir.`,
+        actions: [
+          {
+            id: actionId,
+            toolName: "execute_windows_powershell",
+            args: { command: psCmd },
+            commandString: `powershell.exe -NoProfile -Command "${psCmd.replace(/"/g, '\\"')}"`,
+            type: "powershell",
+            simulatedOutput: `[PowerShell Host 7.4.5] Command executed successfully on Windows 11.\nHandles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName\n-------  ------    -----      -----     ------     --  -- -----------\n    420      24    34280      58120       1.24   4120   1 JarvisAgent\n   1204      82   184200     240900       8.45   1420   1 msedge\n    890      45    98400     142000       4.12   5892   1 Code`,
+            status: "completed",
+            timestamp,
+          },
+        ],
+        shouldSpeak: true,
+      };
+    }
+
+    case "/winget":
+    case "winget": {
+      const wingetCmd = args || "install Spotify.Spotify";
+      return {
+        replyText: `Dispatched Windows Package Manager command: "winget ${wingetCmd}", Sir.`,
+        actions: [
+          {
+            id: actionId,
+            toolName: "execute_windows_powershell",
+            args: { command: `winget ${wingetCmd}` },
+            commandString: `winget ${wingetCmd}`,
+            type: "powershell",
+            simulatedOutput: `Found package: ${wingetCmd}\nVersion: Latest\nPublisher: Microsoft Store / Winget Repository\nDownloading package...\n[██████████████████████████████] 100%\nSuccessfully installed and registered on Windows!`,
+            status: "completed",
+            timestamp,
+          },
+        ],
+        shouldSpeak: true,
+      };
+    }
+
+    case "/os":
+    case "/platform":
+    case "os":
+    case "platform": {
+      const chosen = args.toLowerCase();
+      const target = chosen.includes("mac") ? "macOS Sequoia (Apple Silicon)" : "Windows 11 Pro (PowerShell)";
+      return {
+        replyText: `Target operating system profile configured to: ${target}. Automation engine calibrated.`,
+        actions: [
+          {
+            id: actionId,
+            toolName: "switch_target_os",
+            args: { targetOS: target },
+            commandString: `# OS Context Set: ${target}`,
+            type: "telemetry",
+            simulatedOutput: `[OS Mode Active]: ${target}\nDirect PowerShell / AppleScript dispatch channels mapped.`,
             status: "completed",
             timestamp,
           },

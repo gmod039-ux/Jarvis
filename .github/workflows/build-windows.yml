@@ -1,0 +1,43 @@
+name: Build Windows & macOS Native Executables
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows .EXE Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Package Windows .EXE with Electron Builder
+        run: npx electron-builder --win --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows .EXE Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jarvis-Windows-Installer
+          path: |
+            dist/*.exe
+            release/*.exe
+          if-no-files-found: warn

@@ -5,17 +5,18 @@ import { NativeBuilderTab } from "./components/NativeBuilderTab";
 import { WorkflowsTab } from "./components/WorkflowsTab";
 import { TelemetryTab } from "./components/TelemetryTab";
 import { LibraryTab } from "./components/LibraryTab";
-import { ActiveTab, ChatMessage, SystemTelemetry } from "./types";
+import { ActiveTab, ChatMessage, OSMode, SystemTelemetry } from "./types";
 import { jarvisVoice } from "./utils/speech";
 import { matchConsoleCommand, executeBuiltInCommand } from "./data/consoleCommands";
 import { VoiceSettingsModal } from "./components/VoiceSettingsModal";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("console");
+  const [osMode, setOsMode] = useState<OSMode>("windows");
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
-  const [persona, setPersona] = useState<string>("anime"); // Default or selectable
+  const [persona, setPersona] = useState<string>("anime");
   const [telemetry, setTelemetry] = useState<SystemTelemetry | null>(null);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
 
@@ -24,7 +25,7 @@ export default function App() {
     {
       id: "initial-welcome",
       role: "model",
-      text: "Хай, Сэмпай! (≧◡≦) ✨ Aoi-chan готова помочь тебе управлять твоим Mac! Доступны все функции macOS Sequoia, терминал Zsh, скрипты AppleScript, быстрые команды и голос аниме-тян! Напиши '/help' или настрой голос в студии!",
+      text: "Хай, Сэмпай! ✨ Aoi-chan готова помочь тебе управлять твоим компьютером! Доступны все функции Windows 11 (PowerShell/CMD/Winget) и macOS, экспорт в нативный .EXE, быстрые команды и голос аниме-тян! Напиши '/help' или нажми на микрофон!",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -34,10 +35,10 @@ export default function App() {
     jarvisVoice.setPersona(persona);
   }, [persona]);
 
-  // Fetch telemetry from server
+  // Fetch telemetry from server based on active OS mode
   const fetchTelemetry = useCallback(async () => {
     try {
-      const res = await fetch("/api/jarvis/telemetry");
+      const res = await fetch(`/api/jarvis/telemetry?os=${osMode}`);
       if (res.ok) {
         const data: SystemTelemetry = await res.json();
         setTelemetry(data);
@@ -45,7 +46,7 @@ export default function App() {
     } catch (e) {
       console.log("Telemetry fetch notice:", e);
     }
-  }, []);
+  }, [osMode]);
 
   useEffect(() => {
     fetchTelemetry();
@@ -134,6 +135,7 @@ export default function App() {
             message: trimmedText,
             history: messages.slice(-6),
             persona,
+            osMode,
             voiceOutput: voiceEnabled,
           }),
         });
@@ -143,7 +145,7 @@ export default function App() {
         const modelReplyText =
           data.reply ||
           (persona === "anime"
-            ? "Хай, Сэмпай! Команда выполнена! (≧◡≦) ✨"
+            ? "Хай, Сэмпай! Команда выполнена! ✨"
             : "Command dispatched, Sir.");
 
         const modelMsg: ChatMessage = {
@@ -156,7 +158,6 @@ export default function App() {
 
         setMessages((prev) => [...prev, modelMsg]);
 
-        // If voice is enabled, speak out the response
         if (voiceEnabled) {
           jarvisVoice.speak(modelReplyText, {
             personaId: persona,
@@ -172,8 +173,8 @@ export default function App() {
           role: "model",
           text:
             persona === "anime"
-              ? "Ой, Сэмпай! Кажется, нейросеть споткнулась, проверь подключение к Gemini API! (｡•́︿•̀｡)"
-              : "I apologize, Sir, but a momentary disruption occurred in the neural bridge. Please check your Gemini API connection.",
+              ? "Ой, Сэмпай! Кажется, нейросеть сейчас перезагружается, проверь подключение к сети! ✨"
+              : "I apologize, Sir, but a momentary disruption occurred in the neural bridge. Heuristic fallbacks activated.",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         };
         setMessages((prev) => [...prev, errorMsg]);
@@ -181,7 +182,7 @@ export default function App() {
         setIsProcessing(false);
       }
     },
-    [messages, persona, voiceEnabled, isProcessing, telemetry, handleClearHistory]
+    [messages, persona, osMode, voiceEnabled, isProcessing, telemetry, handleClearHistory]
   );
 
   const handleExecuteScriptInConsole = (prompt: string) => {
@@ -195,7 +196,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-[#E0E0E0] flex flex-col font-sans selection:bg-pink-500/30 selection:text-pink-300">
-      {/* Voice & Persona Settings Modal (accessible from anywhere) */}
+      {/* Voice & Persona Settings Modal */}
       <VoiceSettingsModal
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}
@@ -214,6 +215,8 @@ export default function App() {
         telemetry={telemetry}
         persona={persona}
         onOpenVoiceSettings={() => setIsVoiceModalOpen(true)}
+        osMode={osMode}
+        setOsMode={setOsMode}
       />
 
       {/* Main Content Body */}
@@ -233,7 +236,9 @@ export default function App() {
           />
         )}
 
-        {activeTab === "builder" && <NativeBuilderTab />}
+        {activeTab === "builder" && (
+          <NativeBuilderTab osMode={osMode} setOsMode={setOsMode} />
+        )}
 
         {activeTab === "workflows" && <WorkflowsTab />}
 
@@ -253,11 +258,14 @@ export default function App() {
       {/* Persistent Subtle Footer */}
       <footer className="bg-[#050505] border-t border-white/10 py-3.5 px-4 text-center text-xs font-mono text-white/40">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>J.A.R.V.I.S. &amp; Aoi-chan Autonomous AI Desktop Agent • Optimized for Apple Silicon macOS</span>
-          <span className="text-pink-400/80">Powered by Google Gemini &amp; Custom Voice Synthesis Studio</span>
+          <span>
+            J.A.R.V.I.S. &amp; Aoi-chan AI Desktop Agent • Cross-Platform (Windows 11 EXE &amp; macOS Daemon)
+          </span>
+          <span className="text-pink-400/80">
+            Powered by Google Gemini 3.7 &amp; Phonetic Speech Studio
+          </span>
         </div>
       </footer>
     </div>
   );
 }
-

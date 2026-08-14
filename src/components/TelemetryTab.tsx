@@ -44,11 +44,13 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
   if (!telemetry) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-12 text-center text-white/40 font-mono">
-        <Cpu className="w-10 h-10 text-[#00D1FF] animate-spin-slow mx-auto mb-3" />
-        <p>Connecting to macOS Core Telemetry Bridge...</p>
+        <Cpu className="w-10 h-10 text-[#00D1FF] animate-spin mx-auto mb-3" />
+        <p>Connecting to System Telemetry Bridge...</p>
       </div>
     );
   }
+
+  const isWindows = telemetry.osMode === "windows";
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -59,11 +61,15 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
           <div className="flex items-center space-x-2">
             <Gauge className="w-5 h-5 text-[#00D1FF]" />
             <h1 className="text-lg font-bold text-[#E0E0E0] font-mono tracking-wide">
-              macOS HARDWARE & SYSTEM TELEMETRY
+              {isWindows
+                ? "WINDOWS 11 HARDWARE & SYSTEM TELEMETRY"
+                : "macOS HARDWARE & SYSTEM TELEMETRY"}
             </h1>
           </div>
           <p className="text-xs text-white/50 max-w-xl mt-1">
-            Real-time diagnostics for {telemetry.macOS.hostname} ({telemetry.macOS.version}) • {telemetry.cpu.chip}
+            {isWindows && telemetry.windows
+              ? `Real-time diagnostics for ${telemetry.windows.hostname} (${telemetry.windows.edition}) • ${telemetry.cpu.chip}`
+              : `Real-time diagnostics for ${telemetry.macOS.hostname} (${telemetry.macOS.version}) • ${telemetry.cpu.chip}`}
           </p>
         </div>
 
@@ -73,7 +79,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
             className="bg-[#1A1A1A] hover:bg-white/10 text-white/80 hover:text-white text-xs font-mono px-3.5 py-2 rounded-xl border border-white/10 transition-all flex items-center space-x-1.5 shadow-sm active:scale-95"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-[#00D1FF] ${isRefreshing ? "animate-spin" : ""}`} />
-            <span>Refresh Diagnostics</span>
+            <span>Обновить метрики</span>
           </button>
         </div>
       </div>
@@ -85,7 +91,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-white/40 uppercase tracking-widest flex items-center space-x-1.5">
               <Cpu className="w-3.5 h-3.5 text-[#00D1FF]" />
-              <span>Silicon Load</span>
+              <span>{isWindows ? "CPU Load (x64)" : "Silicon Load (ARM64)"}</span>
             </span>
             <span className="text-[10px] text-[#34C759] bg-[#34C759]/10 px-2 py-0.5 rounded border border-[#34C759]/30">
               {telemetry.cpu.cores} Cores
@@ -97,7 +103,6 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
             <span className="text-xs text-[#00D1FF]">Utilization</span>
           </div>
 
-          {/* Progress bar */}
           <div className="w-full bg-[#050505] rounded-full h-1.5 overflow-hidden border border-white/5">
             <div
               className="bg-gradient-to-r from-[#00D1FF] to-[#0047FF] h-full rounded-full transition-all duration-500"
@@ -119,7 +124,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-white/40 uppercase tracking-widest flex items-center space-x-1.5">
               <Activity className="w-3.5 h-3.5 text-purple-400" />
-              <span>Unified Memory</span>
+              <span>{isWindows ? "RAM (DDR5 / DDR4)" : "Unified Memory"}</span>
             </span>
             <span className="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/30">
               {telemetry.memory.percentage}%
@@ -139,17 +144,17 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-white/40 pt-1">
-            <span>Pressure: {telemetry.memory.pressure}</span>
-            <span className="text-[#34C759]">Swap: 0 MB</span>
+            <span>Status: {telemetry.memory.pressure}</span>
+            <span className="text-[#34C759]">{isWindows ? "Pagefile: OK" : "Swap: 0 MB"}</span>
           </div>
         </div>
 
-        {/* APFS Storage */}
+        {/* Drive Storage */}
         <div className="bg-[#121212] rounded-2xl border border-white/10 p-5 space-y-3 shadow-xl font-mono relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-white/40 uppercase tracking-widest flex items-center space-x-1.5">
               <HardDrive className="w-3.5 h-3.5 text-amber-400" />
-              <span>APFS Drive</span>
+              <span>{isWindows ? "NVMe SSD (NTFS)" : "APFS SSD"}</span>
             </span>
             <span className="text-[10px] text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
               {telemetry.storage.percentage}%
@@ -179,7 +184,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-white/40 uppercase tracking-widest flex items-center space-x-1.5">
               <Battery className="w-3.5 h-3.5 text-[#34C759]" />
-              <span>Battery Status</span>
+              <span>Power Mode</span>
             </span>
             <span className="text-[10px] text-[#34C759] bg-[#34C759]/10 px-2 py-0.5 rounded border border-[#34C759]/30">
               {telemetry.battery.isCharging ? "AC Power" : "Discharging"}
@@ -188,7 +193,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
 
           <div className="flex items-baseline space-x-2">
             <span className="text-3xl font-bold text-[#E0E0E0]">{telemetry.battery.level}%</span>
-            <span className="text-xs text-[#34C759]">⚡ Nominal</span>
+            <span className="text-xs text-[#34C759]">⚡ High Performance</span>
           </div>
 
           <div className="w-full bg-[#050505] rounded-full h-1.5 overflow-hidden border border-white/5">
@@ -200,7 +205,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
 
           <div className="flex items-center justify-between text-[11px] text-white/40 pt-1">
             <span>Health: {telemetry.battery.health}</span>
-            <span>Remaining: {telemetry.battery.timeRemaining}</span>
+            <span>Mode: {telemetry.battery.timeRemaining}</span>
           </div>
         </div>
       </div>
@@ -212,9 +217,15 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
             <div className="flex items-center space-x-2 text-xs font-semibold text-[#E0E0E0]">
               <Layers className="w-4 h-4 text-[#00D1FF]" />
-              <span>ACTIVE DAEMONS & macOS PROCESSES</span>
+              <span>
+                {isWindows
+                  ? "WINDOWS TASK MANAGER & RUNNING PROCESSES"
+                  : "ACTIVE DAEMONS & macOS PROCESSES"}
+              </span>
             </div>
-            <span className="text-[10px] text-white/30">ps -eo pid,pcpu,pmem,comm</span>
+            <span className="text-[10px] text-white/30">
+              {isWindows ? "Get-Process | Select Id, Name, CPU, WS" : "ps -eo pid,pcpu,pmem,comm"}
+            </span>
           </div>
 
           <div className="mt-3 overflow-x-auto">
@@ -238,7 +249,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
                     <td className="py-2.5 text-right">
                       <span
                         className={`text-[10px] px-2 py-0.5 rounded border ${
-                          p.status === "Active"
+                          p.status === "Running" || p.status === "Active"
                             ? "bg-[#34C759]/10 text-[#34C759] border-[#34C759]/30"
                             : p.status === "System"
                             ? "bg-[#00D1FF]/10 text-[#00D1FF] border-[#00D1FF]/30"
@@ -264,47 +275,74 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
 
           <div className="space-y-2.5">
             <button
-              onClick={() => handleDiagnosticClick("purge_memory", "Purging Inactive Memory Cache")}
+              onClick={() =>
+                handleDiagnosticClick(
+                  isWindows ? "powershell_cleanup" : "purge_memory",
+                  isWindows ? "Windows RAM & Standby List Clean" : "Purging Inactive Memory Cache"
+                )
+              }
               className="w-full bg-white/5 hover:bg-white/10 p-3 rounded-2xl border border-white/5 hover:border-white/15 text-left transition-all group"
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-white/80 group-hover:text-[#00D1FF]">
-                  Purge Inactive RAM Cache
+                  {isWindows ? "Clear Standby RAM List" : "Purge Inactive RAM Cache"}
                 </span>
-                <span className="text-[10px] text-[#00D1FF]">sudo purge</span>
+                <span className="text-[10px] text-[#00D1FF]">
+                  {isWindows ? "Clear-RecycleBin" : "sudo purge"}
+                </span>
               </div>
               <p className="text-[11px] text-white/40 mt-1 font-sans">
-                Frees dirty system cache pages and unreferenced RAM allocations.
+                {isWindows
+                  ? "Освобождает рабочие наборы памяти и очищает временные буферы."
+                  : "Frees dirty system cache pages and unreferenced RAM allocations."}
               </p>
             </button>
 
             <button
-              onClick={() => handleDiagnosticClick("check_disk_clutter", "Scanning Storage Hogs")}
+              onClick={() =>
+                handleDiagnosticClick(
+                  isWindows ? "disk_cleanup" : "check_disk_clutter",
+                  isWindows ? "Windows Disk Cleanup (cleanmgr)" : "Scanning Storage Hogs"
+                )
+              }
               className="w-full bg-white/5 hover:bg-white/10 p-3 rounded-2xl border border-white/5 hover:border-white/15 text-left transition-all group"
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-white/80 group-hover:text-[#00D1FF]">
-                  Scan Large Files (&gt;500MB)
+                  {isWindows ? "Run Windows Disk Cleanup" : "Scan Large Files (>500MB)"}
                 </span>
-                <span className="text-[10px] text-[#00D1FF]">mdfind</span>
+                <span className="text-[10px] text-[#00D1FF]">
+                  {isWindows ? "cleanmgr.exe" : "mdfind"}
+                </span>
               </div>
               <p className="text-[11px] text-white/40 mt-1 font-sans">
-                Locates forgotten disk hogs in Downloads and Caches folders.
+                {isWindows
+                  ? "Удаляет старые кеши обновлений Windows и временные файлы."
+                  : "Locates forgotten disk hogs in Downloads and Caches folders."}
               </p>
             </button>
 
             <button
-              onClick={() => handleDiagnosticClick("restart_coreaudio", "Resetting CoreAudio Daemon")}
+              onClick={() =>
+                handleDiagnosticClick(
+                  isWindows ? "restart_audio_win" : "restart_coreaudio",
+                  isWindows ? "Restart Windows Audio Service" : "Resetting CoreAudio Daemon"
+                )
+              }
               className="w-full bg-white/5 hover:bg-white/10 p-3 rounded-2xl border border-white/5 hover:border-white/15 text-left transition-all group"
             >
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-white/80 group-hover:text-[#00D1FF]">
-                  Restart CoreAudio Engine
+                  {isWindows ? "Restart Windows Audio Service" : "Restart CoreAudio Engine"}
                 </span>
-                <span className="text-[10px] text-[#00D1FF]">killall coreaudiod</span>
+                <span className="text-[10px] text-[#00D1FF]">
+                  {isWindows ? "Restart-Service Audiosrv" : "killall coreaudiod"}
+                </span>
               </div>
               <p className="text-[11px] text-white/40 mt-1 font-sans">
-                Fixes crackling audio, AirPods latency, or microphone input stalls.
+                {isWindows
+                  ? "Перезапускает аудио-драйвер Windows при задержках или сбоях звука."
+                  : "Fixes crackling audio, AirPods latency, or microphone input stalls."}
               </p>
             </button>
           </div>
@@ -312,7 +350,7 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
           {activeDiagnostic && (
             <div className="bg-[#34C759]/10 border border-[#34C759]/30 p-2.5 rounded-xl text-[#34C759] flex items-center space-x-2 text-[11px] animate-pulse">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Executed: {activeDiagnostic}</span>
+              <span>Выполнено: {activeDiagnostic}</span>
             </div>
           )}
         </div>
@@ -320,4 +358,3 @@ export const TelemetryTab: React.FC<TelemetryTabProps> = ({
     </div>
   );
 };
-

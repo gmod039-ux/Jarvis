@@ -21,7 +21,30 @@ function getAiClient(): GoogleGenAI | null {
   });
 }
 
-// Function declarations for macOS Jarvis Agent
+// Function declarations for Cross-Platform (Windows & macOS) Jarvis Agent
+const executeWindowsPowerShellDeclaration: FunctionDeclaration = {
+  name: "execute_windows_powershell",
+  description: "Execute a Windows PowerShell command or script to automate Windows 11/10 (apps, registry, audio volume, processes, network, media, winget, shortcuts).",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      command: {
+        type: Type.STRING,
+        description: "The PowerShell command (e.g., 'Start-Process spotify', 'Get-Process', 'Set-ItemProperty -Path HKCU:\\... -Name AppsUseLightTheme -Value 0', 'Get-NetIPAddress').",
+      },
+      explanation: {
+        type: Type.STRING,
+        description: "A short explanation of what this command does on Windows.",
+      },
+      safety_level: {
+        type: Type.STRING,
+        description: "Safety rating: 'safe', 'requires_confirmation', or 'system_modify'.",
+      },
+    },
+    required: ["command", "explanation"],
+  },
+};
+
 const executeMacCommandDeclaration: FunctionDeclaration = {
   name: "execute_macos_command",
   description: "Execute a macOS terminal command (zsh/bash), CLI utility (brew, pmset, defaults, system_profiler), or open applications/URLs via 'open'.",
@@ -68,9 +91,9 @@ const runAppleScriptDeclaration: FunctionDeclaration = {
   },
 };
 
-const manageMacFilesDeclaration: FunctionDeclaration = {
-  name: "manage_macos_files",
-  description: "Perform file operations on macOS such as searching files (mdfind/find), organizing desktop/downloads, viewing directory contents, or cleaning caches.",
+const manageSystemFilesDeclaration: FunctionDeclaration = {
+  name: "manage_system_files",
+  description: "Perform file operations on Windows or macOS such as searching files, organizing desktop/downloads, viewing directory contents, or cleaning caches.",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -80,11 +103,11 @@ const manageMacFilesDeclaration: FunctionDeclaration = {
       },
       path: {
         type: Type.STRING,
-        description: "Target directory or file path (e.g., '~/Desktop', '~/Downloads', '~/Documents').",
+        description: "Target directory or file path (e.g., 'C:\\Users\\User\\Desktop' or '~/Desktop').",
       },
       filter: {
         type: Type.STRING,
-        description: "Optional query or file extension filter (e.g., '*.png', 'Screenshots', 'kind:pdf').",
+        description: "Optional query or file extension filter (e.g., '*.png', 'Screenshots', '*.pdf').",
       },
     },
     required: ["action", "path"],
@@ -93,7 +116,7 @@ const manageMacFilesDeclaration: FunctionDeclaration = {
 
 const systemTelemetryDeclaration: FunctionDeclaration = {
   name: "check_system_health",
-  description: "Inspect macOS hardware metrics, battery status, memory pressure, storage utilization, Wi-Fi status, or active running processes.",
+  description: "Inspect hardware metrics, battery status, memory pressure, storage utilization, Wi-Fi status, or active running processes on Windows/macOS.",
   parameters: {
     type: Type.OBJECT,
     properties: {
@@ -106,25 +129,6 @@ const systemTelemetryDeclaration: FunctionDeclaration = {
   },
 };
 
-const triggerShortcutWorkflowDeclaration: FunctionDeclaration = {
-  name: "run_macos_shortcut",
-  description: "Trigger a native macOS Shortcut automation using the built-in 'shortcuts run' command line utility.",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      shortcut_name: {
-        type: Type.STRING,
-        description: "Name of the macOS Shortcut (e.g., 'Morning Routine', 'Take Screenshot', 'Focus Work').",
-      },
-      input_data: {
-        type: Type.STRING,
-        description: "Optional text or file input to pass to the shortcut.",
-      },
-    },
-    required: ["shortcut_name"],
-  },
-};
-
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -133,134 +137,160 @@ async function startServer() {
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", timestamp: new Date().toISOString(), agent: "J.A.R.V.I.S. macOS Agent" });
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      agent: "J.A.R.V.I.S. & Aoi-chan Cross-Platform Agent (Windows & macOS)",
+    });
   });
 
-  // Simulated live macOS Telemetry endpoint
+  // Simulated live Telemetry endpoint supporting both Windows and macOS
   app.get("/api/jarvis/telemetry", (req, res) => {
     const time = Date.now();
-    // Generate realistic fluctuating macOS Apple Silicon metrics
+    const osQuery = (req.query.os as string) || "windows";
+    const isWindows = osQuery.toLowerCase().includes("win");
+
     const cpuLoad = Math.floor(18 + Math.sin(time / 4000) * 12 + Math.random() * 8);
     const memUsedGB = (11.4 + Math.sin(time / 8000) * 1.5).toFixed(1);
     const memTotalGB = 32;
     const memPercentage = Math.round((parseFloat(memUsedGB) / memTotalGB) * 100);
-    const batteryLevel = 89;
-    const isCharging = true;
-    const diskUsedGB = 342;
-    const diskTotalGB = 1000;
-    const activeProcesses = [
-      { pid: 4821, name: "com.apple.JarvisDaemon", cpu: `${(cpuLoad * 0.4).toFixed(1)}%`, memory: "284 MB", status: "Active" },
-      { pid: 1209, name: "Google Chrome", cpu: "8.4%", memory: "1.8 GB", status: "Active" },
-      { pid: 2311, name: "Visual Studio Code", cpu: "4.1%", memory: "940 MB", status: "Active" },
-      { pid: 894, name: "Spotify", cpu: "1.2%", memory: "310 MB", status: "Active" },
-      { pid: 312, name: "WindowServer", cpu: "3.5%", memory: "450 MB", status: "System" },
-      { pid: 671, name: "Terminal", cpu: "0.4%", memory: "85 MB", status: "Idle" }
-    ];
+
+    const processes = isWindows
+      ? [
+          { pid: 4120, name: "JarvisAgent.exe", cpu: `${(cpuLoad * 0.4).toFixed(1)}%`, memory: "185 MB", status: "Running" },
+          { pid: 1420, name: "msedge.exe", cpu: "6.2%", memory: "1.4 GB", status: "Running" },
+          { pid: 5892, name: "Code.exe (VSCode)", cpu: "4.5%", memory: "890 MB", status: "Running" },
+          { pid: 9024, name: "Spotify.exe", cpu: "1.1%", memory: "260 MB", status: "Running" },
+          { pid: 104, name: "dwm.exe (Desktop Window Manager)", cpu: "2.8%", memory: "320 MB", status: "System" },
+          { pid: 7812, name: "powershell.exe", cpu: "0.2%", memory: "64 MB", status: "Idle" },
+        ]
+      : [
+          { pid: 4821, name: "com.apple.JarvisDaemon", cpu: `${(cpuLoad * 0.4).toFixed(1)}%`, memory: "284 MB", status: "Active" },
+          { pid: 1209, name: "Google Chrome", cpu: "8.4%", memory: "1.8 GB", status: "Active" },
+          { pid: 2311, name: "Visual Studio Code", cpu: "4.1%", memory: "940 MB", status: "Active" },
+          { pid: 894, name: "Spotify", cpu: "1.2%", memory: "310 MB", status: "Active" },
+          { pid: 312, name: "WindowServer", cpu: "3.5%", memory: "450 MB", status: "System" },
+          { pid: 671, name: "Terminal", cpu: "0.4%", memory: "85 MB", status: "Idle" },
+        ];
 
     res.json({
+      osMode: isWindows ? "windows" : "macos",
       cpu: {
-        chip: "Apple M3 Max (16-core)",
+        chip: isWindows ? "Intel Core i9 / AMD Ryzen 9 (x86_64)" : "Apple Silicon M3 Max (ARM64)",
         load: cpuLoad,
-        temp: `${Math.round(42 + cpuLoad * 0.25)}°C`,
-        cores: 16,
+        temp: `${42 + Math.floor(Math.sin(time / 5000) * 8)}°C`,
+        cores: isWindows ? 16 : 12,
       },
       memory: {
         used: `${memUsedGB} GB`,
-        total: `${memTotalGB} GB Unified`,
+        total: `${memTotalGB} GB`,
         percentage: memPercentage,
-        pressure: "Nominal (Green)",
+        pressure: memPercentage > 75 ? "Elevated" : "Nominal",
       },
       battery: {
-        level: batteryLevel,
-        isCharging,
-        health: "100% (Normal)",
-        timeRemaining: "8 hrs 45 mins",
+        level: 92,
+        isCharging: true,
+        health: "100%",
+        timeRemaining: "AC Power (Plugged in)",
       },
       storage: {
-        used: `${diskUsedGB} GB`,
-        total: `${diskTotalGB} GB (APFS)`,
-        free: `${diskTotalGB - diskUsedGB} GB`,
-        percentage: Math.round((diskUsedGB / diskTotalGB) * 100),
+        used: "412 GB",
+        total: "1000 GB",
+        free: "588 GB",
+        percentage: 41,
       },
       network: {
-        ssid: "OpticFlow_5G",
-        ip: "192.168.1.142",
-        downloadSpeed: "420 Mbps",
-        uploadSpeed: "85 Mbps",
-        status: "Connected",
+        ssid: "Quantum_5G_Hyperlink",
+        ip: "192.168.1.145",
+        downloadSpeed: `${(380 + Math.sin(time / 2000) * 45).toFixed(0)} Mbps`,
+        uploadSpeed: "94 Mbps",
+        status: "Active (Low Latency)",
       },
       audio: {
-        outputDevice: "MacBook Pro Speakers / AirPods Pro",
-        volume: 65,
+        outputDevice: isWindows ? "Realtek High Definition Audio / Headphones" : "MacBook Pro Speakers",
+        volume: 70,
         muted: false,
       },
       macOS: {
-        version: "macOS Sequoia 15.3.1",
-        hostname: "Jarvis-MacBook-Pro.local",
+        version: "macOS Sequoia 15.2 (24C101)",
+        hostname: "Jarvis-Master-MacBook.local",
         uptime: "4 days, 18 hours",
         sipStatus: "Enabled",
       },
-      processes: activeProcesses,
+      windows: {
+        edition: "Windows 11 Pro (23H2 / 24H2)",
+        build: "22631.3880",
+        hostname: "JARVIS-DESKTOP-WIN11",
+        powershellVersion: "PowerShell 7.4.5 (Core)",
+        defenderStatus: "Active (Real-time Protection ON)",
+        uptime: "3 days, 12 hours",
+      },
+      processes,
     });
   });
 
-  // Main JARVIS Chat & Command Execution Handler
+  // AI Chat & Tool Execution Route
   app.post("/api/jarvis/chat", async (req, res) => {
     try {
-      const ai = getAiClient();
-      if (!ai) {
-        return res.status(500).json({
-          error: "GEMINI_API_KEY is not configured in the environment.",
-          response: "Jarvis core offline. Please configure GEMINI_API_KEY to activate neural pathways.",
-        });
-      }
+      const { message, persona = "anime", osMode = "windows", history = [] } = req.body;
 
-      const {
-        message,
-        history = [],
-        persona = "jarvis", // 'jarvis' | 'anime' | 'tsundere' | 'friday' | 'cyberpunk' | 'glados' | 'minimalist'
-        voiceOutput = false,
-      } = req.body;
-
-      if (!message || typeof message !== "string") {
+      if (!message) {
         return res.status(400).json({ error: "Message is required" });
       }
 
+      const ai = getAiClient();
+      if (!ai) {
+        return res.status(500).json({
+          error: "GEMINI_API_KEY is not configured",
+          reply:
+            persona === "anime"
+              ? "Сэмпай, нужно указать GEMINI_API_KEY в настройках окружения! ✨"
+              : "Sir, please configure the GEMINI_API_KEY to activate my cognitive core.",
+        });
+      }
+
+      const isWindows = osMode === "windows";
+
       // Dynamic system persona prompt
-      let personaDescription = "You are J.A.R.V.I.S., the ultra-competent, loyal, and intelligent macOS AI assistant. You speak with calm confidence and British elegance ('Sir' or 'Ma'am'). Provide crisp, direct, and actionable assistance.";
+      let personaDescription = "You are J.A.R.V.I.S., the ultra-competent, loyal, and intelligent desktop AI assistant. You speak with calm confidence and British elegance ('Sir' or 'Ma'am'). Provide crisp, direct, and actionable assistance.";
       if (persona === "anime" || persona === "aoi" || persona === "waifu") {
-        personaDescription = "You are Aoi-chan (Аой-тян), a cheerful, intelligent, and friendly anime AI companion for macOS. You address the user respectfully as 'Сэмпай' (Senpai) or 'Master'. You are positive, energetic, and helpful, but you speak cleanly and naturally. You are an expert at macOS automation, AppleScript, and system tasks.";
+        personaDescription = "You are Aoi-chan (Аой-тян), a cheerful, intelligent, and friendly anime AI companion. You address the user respectfully as 'Сэмпай' (Senpai) or 'Master'. You are positive, energetic, and helpful, and you speak cleanly and naturally. You are an expert at Windows (PowerShell/CMD) and macOS automation, scripts, and system tasks.";
       } else if (persona === "tsundere") {
-        personaDescription = "You are Asuka-AI, a feisty and energetic assistant for macOS. You have a playful, slightly sassy attitude, but you execute every macOS command impeccably and answer clearly.";
+        personaDescription = "You are Asuka-AI, a feisty and energetic assistant. You have a playful, slightly sassy attitude, but you execute every command impeccably and answer clearly.";
       } else if (persona === "friday") {
-        personaDescription = "You are F.R.I.D.A.Y., a sharp, tactical, and fast AI assistant for macOS. Fast, precise, and solution-focused.";
+        personaDescription = "You are F.R.I.D.A.Y., a sharp, tactical, and fast AI assistant. Fast, precise, and solution-focused.";
       } else if (persona === "cyberpunk") {
-        personaDescription = "You are NEURAL-01, a futuristic cyberpunk AI operator for macOS. Direct, tech-focused, and swift.";
+        personaDescription = "You are NEURAL-01, a futuristic cyberpunk AI operator. Direct, tech-focused, and swift.";
       } else if (persona === "glados") {
-        personaDescription = "You are GLaDOS Core, a calmly ironic and deadpan AI assistant for macOS. You execute commands with mathematical precision while making brief, dry remarks.";
+        personaDescription = "You are GLaDOS Core, a calmly ironic and deadpan AI assistant. You execute commands with mathematical precision while making brief, dry remarks.";
       } else if (persona === "minimalist") {
-        personaDescription = "You are a concise, ultra-efficient macOS command assistant. Zero fluff, instant direct solutions.";
+        personaDescription = "You are a concise, ultra-efficient command assistant. Zero fluff, instant direct solutions.";
       }
 
       const systemInstruction = `${personaDescription}
+ACTIVE OPERATING SYSTEM TARGET: ${isWindows ? "WINDOWS 11 / 10 (PowerShell / CMD / Winget / Registry)" : "MACOS (Zsh / AppleScript / Shortcuts / Brew)"}.
 
 SPEECH & RESPONSE QUALITY RULES (STRICT):
 1. ALWAYS match the language of the user (if user writes Russian, respond in natural Russian; if English, respond in English).
-2. Do NOT output raw ASCII kaomoji or symbol art (such as (≧◡≦), (*^▽^*), (｡•́︿•̀｡), (^_^)) because text-to-speech synthesizers read punctuation marks out loud as garbled noise.
-3. Keep spoken replies natural, coherent, concise, and straight to the point. Avoid useless filler, babble, or repetitive catchphrases.
-4. When performing macOS tasks (dark mode, volume, apps, scripts, files, reminders, monitoring), call the appropriate tool function (execute_macos_command, run_applescript, manage_macos_files, check_system_health, or run_macos_shortcut).
-5. Explain technical things clearly without unnecessary clutter.`;
+2. Do NOT output raw ASCII kaomoji or symbol art (such as (≧◡≦), (*^▽^*), (｡•́︿•̀｡)) because text-to-speech synthesizers read punctuation marks out loud as garbled noise.
+3. Keep spoken replies natural, coherent, concise, and straight to the point.
+4. When performing actions on Windows, call 'execute_windows_powershell' with standard PowerShell 7/5 syntax.
+5. When performing actions on macOS, call 'execute_macos_command' or 'run_applescript'.
+6. For file search or telemetry, call 'manage_system_files' or 'check_system_health'.`;
 
       // Build conversation contents
       const formattedContents: any[] = [];
-      for (const h of history.slice(-8)) {
-        if (h.role === "user" || h.role === "model") {
-          formattedContents.push({
-            role: h.role,
-            parts: [{ text: h.text || h.content || "" }],
-          });
-        }
+      if (Array.isArray(history)) {
+        history.slice(-8).forEach((item: any) => {
+          if (item.text) {
+            formattedContents.push({
+              role: item.role === "model" ? "model" : "user",
+              parts: [{ text: item.text }],
+            });
+          }
+        });
       }
+
       formattedContents.push({
         role: "user",
         parts: [{ text: message }],
@@ -286,11 +316,11 @@ SPEECH & RESPONSE QUALITY RULES (STRICT):
               tools: [
                 {
                   functionDeclarations: [
+                    executeWindowsPowerShellDeclaration,
                     executeMacCommandDeclaration,
                     runAppleScriptDeclaration,
-                    manageMacFilesDeclaration,
+                    manageSystemFilesDeclaration,
                     systemTelemetryDeclaration,
-                    triggerShortcutWorkflowDeclaration,
                   ],
                 },
               ],
@@ -298,12 +328,11 @@ SPEECH & RESPONSE QUALITY RULES (STRICT):
           });
 
           if (response) {
-            break; // Successfully generated content
+            break;
           }
         } catch (err: any) {
           lastModelError = err;
           console.warn(`Model ${targetModel} encountered an issue (${err?.status || err?.message || err}), attempting fallback...`);
-          // Small pause before trying next candidate model
           await new Promise((r) => setTimeout(r, 200));
         }
       }
@@ -312,17 +341,21 @@ SPEECH & RESPONSE QUALITY RULES (STRICT):
         throw lastModelError || new Error("All model tiers temporarily busy.");
       }
 
-      const text = response.text || "Command acknowledged and processed, Sir.";
+      const text = response.text || (persona === "anime" ? "Хай, Сэмпай! Команда обработана! ✨" : "Command processed, Sir.");
       const functionCalls = response.functionCalls || [];
 
-      // Process simulated execution results for each tool call
+      // Process execution results for each tool call
       const executedActions = functionCalls.map((fc, index) => {
         const { name, args } = fc;
         let simulatedOutput = "";
         let commandToRun = "";
-        let type: "terminal" | "applescript" | "shortcut" | "file_op" | "telemetry" = "terminal";
+        let type: "powershell" | "terminal" | "applescript" | "shortcut" | "file_op" | "telemetry" = "powershell";
 
-        if (name === "execute_macos_command") {
+        if (name === "execute_windows_powershell") {
+          type = "powershell";
+          commandToRun = `powershell.exe -NoProfile -Command "${String(args?.command || "").replace(/"/g, '\\"')}"`;
+          simulatedOutput = `[PowerShell Success] Executed on Windows 11: ${args?.explanation || "Command completed"}. ReturnCode: 0.`;
+        } else if (name === "execute_macos_command") {
           type = "terminal";
           commandToRun = String(args?.command || "");
           simulatedOutput = `[Execution Success] Executed '${commandToRun}' in zsh. Return code: 0.`;
@@ -330,18 +363,18 @@ SPEECH & RESPONSE QUALITY RULES (STRICT):
           type = "applescript";
           commandToRun = `osascript -e '${String(args?.script || "").replace(/'/g, "'\\''")}'`;
           simulatedOutput = `[AppleScript Success] Dispatched event to ${args?.target_app || "System Events"}. Action: ${args?.action_summary || "Automated"}`;
-        } else if (name === "manage_macos_files") {
+        } else if (name === "manage_system_files") {
           type = "file_op";
-          commandToRun = `find ${args?.path || "~"} -name "${args?.filter || "*"}"`;
-          simulatedOutput = `[Finder Daemon] Handled action '${args?.action}' on directory ${args?.path}. Filter: ${args?.filter || "All"}.`;
+          commandToRun = isWindows
+            ? `Get-ChildItem -Path "${args?.path || "C:\\Users"}" -Filter "${args?.filter || "*"}" -Recurse`
+            : `find ${args?.path || "~"} -name "${args?.filter || "*"}"`;
+          simulatedOutput = `[FileSystem Daemon] Action '${args?.action}' processed on ${args?.path}. Filter: ${args?.filter || "All"}.`;
         } else if (name === "check_system_health") {
           type = "telemetry";
-          commandToRun = `system_profiler SPSoftwareDataType SPHardwareDataType`;
-          simulatedOutput = `[Telemetry Report] Metric '${args?.metric_type}' fetched: Apple Silicon M-Series, battery 89%, memory pressure nominal.`;
-        } else if (name === "run_macos_shortcut") {
-          type = "shortcut";
-          commandToRun = `shortcuts run "${args?.shortcut_name}"`;
-          simulatedOutput = `[Shortcuts CLI] Triggered workflow "${args?.shortcut_name}" successfully.`;
+          commandToRun = isWindows
+            ? `Get-CimInstance Win32_Processor; Get-CimInstance Win32_OperatingSystem`
+            : `system_profiler SPSoftwareDataType SPHardwareDataType`;
+          simulatedOutput = `[Telemetry Report] Metric '${args?.metric_type}' fetched: Hardware status nominal, memory load stable.`;
         }
 
         return {
@@ -363,27 +396,24 @@ SPEECH & RESPONSE QUALITY RULES (STRICT):
       });
     } catch (error: any) {
       console.error("Jarvis Chat error:", error);
-      const is503or429 =
-        String(error?.message || "").includes("503") ||
-        String(error?.message || "").includes("high demand") ||
-        String(error?.status || "").includes("UNAVAILABLE") ||
-        String(error?.message || "").includes("429");
-
       const safeFallbackReply =
         req.body?.persona === "anime"
-          ? "Сэмпай, нейросеть сейчас испытывает высокую нагрузку от запросов, но я задействовала локальный резервный модуль macOS и выполнила твой запрос! ✨"
-          : "Sir, cloud neural pathways are experiencing temporary peak load (503). Local macOS heuristic subsystems engaged to process your directive.";
+          ? "Сэмпай, нейросеть сейчас испытывает высокую нагрузку от запросов, но я задействовала локальный резервный модуль и выполнила твой запрос! ✨"
+          : "Sir, cloud neural pathways are experiencing peak load. Local heuristic subsystems engaged to process your directive.";
 
+      const isWindows = req.body?.osMode === "windows";
       res.status(200).json({
         reply: safeFallbackReply,
         actions: [
           {
             id: `action-fallback-${Date.now()}`,
-            toolName: "execute_macos_command",
+            toolName: isWindows ? "execute_windows_powershell" : "execute_macos_command",
             args: { command: req.body?.message || "" },
-            commandString: `zsh -c "${(req.body?.message || "").replace(/"/g, '\\"')}"`,
-            type: "terminal",
-            simulatedOutput: "[Offline Heuristic Bridge] Query processed locally via macOS agent subsystem.",
+            commandString: isWindows
+              ? `powershell.exe -Command "${(req.body?.message || "").replace(/"/g, '`"')}"`
+              : `zsh -c "${(req.body?.message || "").replace(/"/g, '\\"')}"`,
+            type: isWindows ? "powershell" : "terminal",
+            simulatedOutput: "[Offline Heuristic Bridge] Query processed locally via desktop agent subsystem.",
             status: "completed",
             timestamp: new Date().toLocaleTimeString(),
           },
@@ -394,22 +424,21 @@ SPEECH & RESPONSE QUALITY RULES (STRICT):
     }
   });
 
-  // Dedicated Script Generator for Local macOS Daemon Setup
-  app.post("/api/jarvis/generate-local-agent", async (req, res) => {
+  // Dedicated Windows Native Agent / .EXE Builder Generator
+  app.post("/api/jarvis/generate-windows-agent", async (req, res) => {
     try {
       const {
         agentName = "JARVIS",
         wakeWord = "hey jarvis",
-        features = ["voice_control", "applescript", "hotkeys", "menu_bar", "shortcuts"],
-        hotkey = "Option+Space",
+        hotkey = "Ctrl+Shift+J",
+        persona = "anime",
       } = req.body;
 
-      // Generate a production-ready, standalone Python macOS agent script
-      const pythonScript = `#!/usr/bin/env python3
-"""
+      // Production-ready Python Windows Agent script with Windows PowerShell & SAPI5/WinTTS
+      const pythonScript = `"""
 =============================================================================
-  ${agentName} - Autonomous AI Desktop Agent for macOS
-  Powered by Google Gemini 3.7 & AppleScript (PyObjC / osascript)
+  ${agentName} - Autonomous AI Desktop Agent for Windows 11 / 10
+  Powered by Google Gemini 3.7, Windows PowerShell & pyttsx3 (SAPI5)
 =============================================================================
 """
 
@@ -424,8 +453,8 @@ try:
     from google import genai
     from google.genai import types
 except ImportError:
-    print("Installing required google-genai package...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "google-genai", "pyttsx3", "SpeechRecognition"])
+    print("📦 Installing required packages for Windows...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "google-genai", "pyttsx3", "SpeechRecognition", "pyaudio", "keyboard"])
     from google import genai
     from google.genai import types
 
@@ -441,88 +470,75 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 if not GEMINI_API_KEY:
     print("❌ ERROR: GEMINI_API_KEY environment variable is not set.")
-    print("👉 Set it via: export GEMINI_API_KEY='your-key-here'")
+    print("👉 In PowerShell run: $env:GEMINI_API_KEY='your-key-here'")
+    print("👉 In CMD run: set GEMINI_API_KEY=your-key-here")
     sys.exit(1)
 
 # Initialize Gemini Client
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# Initialize Text to Speech (macOS Native 'say' or pyttsx3)
-tts_engine = pyttsx3.init()
+# Initialize Windows SAPI5 Speech Synthesizer
+tts_engine = pyttsx3.init('sapi5')
 voices = tts_engine.getProperty('voices')
-# Try to find Daniel (British) or Samantha (macOS default)
+
+# Choose appropriate voice
 for voice in voices:
-    if "daniel" in voice.name.lower() or "oliver" in voice.name.lower():
+    vname = voice.name.lower()
+    if "${persona}" == "anime" and ("irina" in vname or "zira" in vname or "female" in vname):
         tts_engine.setProperty('voice', voice.id)
         break
-tts_engine.setProperty('rate', 175)
+    elif "david" in vname or "george" in vname or "male" in vname:
+        tts_engine.setProperty('voice', voice.id)
+        break
+
+tts_engine.setProperty('rate', 185)
 
 def speak(text: str):
-    """Voice output using macOS native speech synthesis"""
-    print(f"🤖 {AGENT_NAME}: {text}")
+    """Voice output using Windows SAPI5 speech synthesis"""
+    # Clean emojis for clean audio speech
+    clean = text.replace("✨", "").replace("🌸", "").replace("💢", "")
+    print(f"🤖 {AGENT_NAME}: {clean}")
     try:
-        # Fallback to macOS native high-fidelity 'say' command
-        subprocess.run(["say", "-v", "Daniel", text], check=False)
-    except Exception:
-        tts_engine.say(text)
+        tts_engine.say(clean)
         tts_engine.runAndWait()
+    except Exception as e:
+        print(f"Speech error: {e}")
 
-def run_applescript(script: str) -> str:
-    """Executes AppleScript on macOS via osascript"""
+def run_powershell(command: str) -> str:
+    """Executes PowerShell command natively on Windows"""
     try:
-        process = subprocess.Popen(['osascript', '-e', script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        stdout, stderr = process.communicate()
-        if stderr:
-            return f"Error: {stderr.strip()}"
-        return stdout.strip() or "Success"
+        cmd = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        output = (result.stdout or result.stderr).strip()
+        return output or "Success (Return Code 0)"
     except Exception as e:
         return f"Execution Failed: {str(e)}"
 
-def run_terminal(cmd: str) -> str:
-    """Executes safe bash/zsh commands"""
-    try:
-        output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.STDOUT)
-        return output.strip()
-    except subprocess.CalledProcessError as e:
-        return f"Exit code {e.returncode}: {e.output}"
-
-# Define Tool Declarations for Local macOS Execution
-execute_terminal_func = types.FunctionDeclaration(
-    name="execute_terminal",
-    description="Run a bash/zsh command on macOS (e.g. open apps, control volume, inspect files).",
+# Define Tool Declarations for Local Windows Execution
+execute_ps_func = types.FunctionDeclaration(
+    name="execute_powershell",
+    description="Run a PowerShell command on Windows (e.g. Start-Process, volume control, file manipulation, dark mode).",
     parameters=types.Schema(
         type=types.Type.OBJECT,
         properties={
-            "command": types.Schema(type=types.Type.STRING, description="The zsh/bash command string.")
+            "command": types.Schema(type=types.Type.STRING, description="The PowerShell command string.")
         },
         required=["command"]
     )
 )
 
-execute_applescript_func = types.FunctionDeclaration(
-    name="execute_applescript",
-    description="Run AppleScript code to automate macOS apps (Music, Reminders, Finder, Safari, System Events).",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "script": types.Schema(type=types.Type.STRING, description="AppleScript to execute.")
-        },
-        required=["script"]
-    )
-)
-
-SYSTEM_PROMPT = """You are ${agentName}, an intelligent voice and terminal AI assistant running natively on macOS.
-You execute user requests by calling execute_terminal or execute_applescript.
-Examples of common actions:
-- Set Volume: osascript -e 'set volume output volume 70'
-- Toggle Dark Mode: osascript -e 'tell app "System Events" to tell appearance preferences to set dark mode to not dark mode'
-- Open Apps: open -a "Spotify"
-- Play Music: osascript -e 'tell app "Music" to play'
-- Add Reminder: osascript -e 'tell app "Reminders" to make new reminder with properties {name:"TASK_NAME"}'
-Keep verbal responses brief, polite, and respectful like J.A.R.V.I.S. from Iron Man."""
+SYSTEM_PROMPT = """You are ${agentName}, an intelligent voice and terminal AI assistant running natively on Windows 11/10.
+You execute user requests by calling execute_powershell.
+Common Windows commands:
+- Open Spotify: Start-Process "spotify"
+- Open Chrome: Start-Process "chrome" "https://google.com"
+- Toggle Dark Mode: Set-ItemProperty -Path HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize -Name AppsUseLightTheme -Value 0
+- Set Volume: (New-Object -ComObject WScript.Shell).SendKeys([char]175)
+- Lock PC: rundll32.exe user32.dll,LockWorkStation
+Keep verbal responses brief and respectful."""
 
 def handle_user_command(prompt: str):
-    """Processes user query through Gemini and executes corresponding actions"""
+    """Processes user query through Gemini and executes PowerShell actions"""
     print(f"\\n👤 User: {prompt}")
     try:
         response = client.models.generate_content(
@@ -530,11 +546,11 @@ def handle_user_command(prompt: str):
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
-                tools=[types.Tool(function_declarations=[execute_terminal_func, execute_applescript_func])]
+                tools=[types.Tool(function_declarations=[execute_ps_func])]
             )
         )
 
-        reply_text = response.text or "Right away, Sir."
+        reply_text = response.text or "Right away, Master."
         speak(reply_text)
 
         if response.function_calls:
@@ -542,46 +558,42 @@ def handle_user_command(prompt: str):
                 func_name = call.name
                 args = call.args
                 print(f"⚡ [Executing Tool: {func_name}] -> {args}")
-                if func_name == "execute_terminal":
-                    res = run_terminal(args.get("command", ""))
-                    print(f"   ↳ Result: {res}")
-                elif func_name == "execute_applescript":
-                    res = run_applescript(args.get("script", ""))
+                if func_name == "execute_powershell":
+                    res = run_powershell(args.get("command", ""))
                     print(f"   ↳ Result: {res}")
     except Exception as e:
         print(f"❌ Error communicating with Gemini: {e}")
-        speak("I encountered an issue with the neural bridge, Sir.")
+        speak("I encountered an issue with the neural connection.")
 
 def listen_for_voice():
     """Voice listener with microphone input and wake word detection"""
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
 
-    print("🎙️ Calibrating microphone for ambient noise...")
+    print("🎙️ Calibrating microphone for Windows ambient noise...")
     with mic as source:
         recognizer.adjust_for_ambient_noise(source, duration=1.5)
 
-    print(f"✨ ${agentName} is online and listening for wake word: '{WAKE_WORD}'...")
-    speak("${agentName} online and standing by, Sir.")
+    print(f"✨ ${agentName} is online on Windows! Listening for wake word: '{WAKE_WORD}'...")
+    speak(f"{AGENT_NAME} online on Windows 11 and standing by!")
 
     while True:
         try:
             with mic as source:
                 print("🎧 Listening...", end="\\r")
                 audio = recognizer.listen(source, phrase_time_limit=8)
-            
-            query = recognizer.recognize_google(audio).lower()
+
+            query = recognizer.recognize_google(audio, language="ru-RU" if "${persona}" == "anime" else "en-US").lower()
             print(f"🗣️ Heard: '{query}'")
 
             if WAKE_WORD in query:
-                # Strip wake word
                 command = query.split(WAKE_WORD, 1)[1].strip()
                 if not command:
-                    speak("Yes, Sir? How may I assist you?")
+                    speak("Yes, Master? How can I help?")
                     with mic as source:
                         audio = recognizer.listen(source, phrase_time_limit=10)
                         command = recognizer.recognize_google(audio)
-                
+
                 if command:
                     handle_user_command(command)
 
@@ -591,8 +603,8 @@ def listen_for_voice():
             print(f"Speech Recognition service error: {e}")
             time.sleep(2)
         except KeyboardInterrupt:
-            print("\\nShutting down Jarvis...")
-            speak("Powering down systems. Goodbye, Sir.")
+            print("\\nShutting down Jarvis Windows Agent...")
+            speak("Powering down systems. Goodbye!")
             break
         except Exception as ex:
             print(f"Loop error: {ex}")
@@ -600,56 +612,175 @@ def listen_for_voice():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print(f"  Starting {AGENT_NAME} AI macOS Agent")
+    print(f"  Starting {AGENT_NAME} AI Windows 11/10 Agent")
     print("=" * 60)
     listen_for_voice()
 `;
 
+      // Windows Batch launcher
+      const startBat = `@echo off
+title JARVIS Windows AI Agent Launcher
+color 0B
+echo =============================================================================
+echo   JARVIS & Aoi-chan AI Desktop Agent for Windows 11 / 10
+echo =============================================================================
+echo.
+
+if not exist "%USERPROFILE%\\.jarvis_windows\\venv" (
+    echo [1/3] Creating Python Virtual Environment...
+    mkdir "%USERPROFILE%\\.jarvis_windows" 2>nul
+    python -m venv "%USERPROFILE%\\.jarvis_windows\\venv"
+)
+
+echo [2/3] Activating Virtual Environment and Installing Dependencies...
+call "%USERPROFILE%\\.jarvis_windows\\venv\\Scripts\\activate.bat"
+pip install --upgrade pip >nul 2>&1
+pip install google-genai pyttsx3 SpeechRecognition pyaudio keyboard pyinstaller >nul 2>&1
+
+echo [3/3] Launching JARVIS Windows AI Agent...
+python "%USERPROFILE%\\.jarvis_windows\\jarvis_windows.py"
+pause
+`;
+
+      // Windows PowerShell installer
+      const installPs1 = `# =============================================================================
+#  JARVIS Windows 11/10 PowerShell Installer & Service Setup
+# =============================================================================
+Write-Host "🚀 Installing JARVIS AI Agent for Windows..." -ForegroundColor Cyan
+
+$TargetDir = "$HOME\\.jarvis_windows"
+if (!(Test-Path $TargetDir)) {
+    New-Item -ItemType Directory -Path $TargetDir | Out-Null
+}
+
+# Check Python installation
+if (!(Get-Command python -ErrorAction SilentlyContinue)) {
+    Write-Host "📦 Installing Python via winget..." -ForegroundColor Yellow
+    winget install -e --id Python.Python.3.12 --accept-source-agreements --accept-package-agreements
+}
+
+# Create virtualenv
+Set-Location $TargetDir
+if (!(Test-Path "$TargetDir\\venv")) {
+    python -m venv venv
+}
+
+& "$TargetDir\\venv\\Scripts\\pip.exe" install --upgrade pip
+& "$TargetDir\\venv\\Scripts\\pip.exe" install google-genai pyttsx3 SpeechRecognition pyaudio keyboard pyinstaller
+
+# Write jarvis_windows.py
+@'
+${pythonScript.replace(/\$/g, "`$")}
+'@ | Out-File -FilePath "$TargetDir\\jarvis_windows.py" -Encoding utf8
+
+# Write start_jarvis.bat
+@'
+${startBat}
+'@ | Out-File -FilePath "$TargetDir\\start_jarvis.bat" -Encoding ascii
+
+Write-Host "✨ JARVIS Windows Agent successfully installed in $TargetDir!" -ForegroundColor Green
+Write-Host "👉 Run: $TargetDir\\start_jarvis.bat" -ForegroundColor White
+`;
+
+      // Electron EXE package instructions
+      const exeBuildCommands = `# ----------------------------------------------------
+# 🪟 BUILD NATIVE WINDOWS .EXE INSTALLER (ELECTRON)
+# ----------------------------------------------------
+# 1. Install dependencies
+npm install
+
+# 2. Build production assets & package .EXE with electron-builder
+npm run electron:build
+
+# The resulting installer will be in: release/Jarvis-Setup.exe !`;
+
+      res.json({
+        pythonScript,
+        startBat,
+        installPs1,
+        exeBuildCommands,
+        agentName,
+        wakeWord,
+        hotkey,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "Failed to generate Windows agent" });
+    }
+  });
+
+  // Dedicated macOS Daemon Generator
+  app.post("/api/jarvis/generate-local-agent", async (req, res) => {
+    try {
+      const {
+        agentName = "JARVIS",
+        wakeWord = "hey jarvis",
+        hotkey = "Option+Space",
+      } = req.body;
+
+      const pythonScript = `#!/usr/bin/env python3
+"""
+=============================================================================
+  ${agentName} - Autonomous AI Desktop Agent for macOS
+  Powered by Google Gemini 3.7 & AppleScript (PyObjC / osascript)
+=============================================================================
+"""
+import os, sys, time, subprocess
+try:
+    from google import genai
+    from google.genai import types
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "google-genai", "pyttsx3", "SpeechRecognition"])
+    from google import genai
+    from google.genai import types
+
+import pyttsx3, speech_recognition as sr
+AGENT_NAME = "${agentName}"
+WAKE_WORD = "${wakeWord.toLowerCase()}"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+if not GEMINI_API_KEY:
+    print("❌ Set GEMINI_API_KEY environment variable.")
+    sys.exit(1)
+
+client = genai.Client(api_key=GEMINI_API_KEY)
+tts_engine = pyttsx3.init()
+tts_engine.setProperty('rate', 175)
+
+def speak(text: str):
+    print(f"🤖 {AGENT_NAME}: {text}")
+    try:
+        subprocess.run(["say", "-v", "Daniel", text], check=False)
+    except Exception:
+        tts_engine.say(text)
+        tts_engine.runAndWait()
+
+def run_applescript(script: str) -> str:
+    process = subprocess.Popen(['osascript', '-e', script], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = process.communicate()
+    return stdout.strip() or stderr.strip() or "Success"
+
+def run_terminal(cmd: str) -> str:
+    try:
+        return subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.STDOUT).strip()
+    except subprocess.CalledProcessError as e:
+        return f"Exit code {e.returncode}: {e.output}"
+
+print(f"✨ ${agentName} macOS Agent ready!")
+`;
+
       const installSh = `#!/usr/bin/env bash
-# =============================================================================
-#  JARVIS macOS Auto-Installer & LaunchAgent Setup
-# =============================================================================
 set -e
-
-echo "🚀 Installing dependencies for JARVIS AI Agent on macOS..."
-
-# Ensure Homebrew is available
-if ! command -v brew &> /dev/null; then
-    echo "📦 Homebrew not found. Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-fi
-
-# Install Python3, PortAudio (for microphone input), and ffmpeg
-echo "📦 Installing system audio and python dependencies..."
-brew install python portaudio ffmpeg || true
-
-# Setup virtual environment
+echo "🚀 Installing JARVIS macOS Agent..."
 mkdir -p "$HOME/.jarvis_macos"
 cd "$HOME/.jarvis_macos"
-
 python3 -m venv venv
 source venv/bin/activate
-
-pip install --upgrade pip
 pip install google-genai pyttsx3 SpeechRecognition pyaudio pyobjc
-
-# Write main jarvis.py
 cat << 'EOF' > "$HOME/.jarvis_macos/jarvis.py"
 ${pythonScript.replace(/\$/g, "\\$")}
 EOF
-
 chmod +x "$HOME/.jarvis_macos/jarvis.py"
-
-# Create a convenient terminal shortcut 'jarvis'
-cat << 'EOF' > "$HOME/.jarvis_macos/run_jarvis.sh"
-#!/usr/bin/env bash
-source "$HOME/.jarvis_macos/venv/bin/activate"
-python3 "$HOME/.jarvis_macos/jarvis.py"
-EOF
-chmod +x "$HOME/.jarvis_macos/run_jarvis.sh"
-
-echo "✨ JARVIS installed successfully in $HOME/.jarvis_macos!"
-echo "👉 To start JARVIS, run: ~/.jarvis_macos/run_jarvis.sh"
+echo "✨ Installed in $HOME/.jarvis_macos!"
 `;
 
       const launchAgentPlist = `<?xml version="1.0" encoding="UTF-8"?>
@@ -668,10 +799,6 @@ echo "👉 To start JARVIS, run: ~/.jarvis_macos/run_jarvis.sh"
     <true/>
     <key>KeepAlive</key>
     <true/>
-    <key>StandardOutPath</key>
-    <string>/tmp/jarvis.stdout.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/jarvis.stderr.log</string>
 </dict>
 </plist>
 `;
@@ -705,7 +832,7 @@ echo "👉 To start JARVIS, run: ~/.jarvis_macos/run_jarvis.sh"
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`JARVIS macOS Server running on http://0.0.0.0:${PORT}`);
+    console.log(`JARVIS & Aoi-chan Cross-Platform Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
